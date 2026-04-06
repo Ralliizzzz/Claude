@@ -20,10 +20,16 @@ The UI language is Danish (status messages, button labels).
 
 ## Git Workflow
 
-After every significant change: stage the relevant files, commit with a conventional message (`feat:`, `fix:`, `chore:`, etc.), and push to origin.
+**Commit and push after every piece of completed work** — no matter how small. This ensures we never lose progress and can always revert to a known-good state.
+
+Rules:
+- Commit after every feature addition, bug fix, or meaningful change
+- Always push to `origin/master` immediately after committing
+- Use conventional commit prefixes: `feat:`, `fix:`, `chore:`, `refactor:`, `style:`
+- Write messages that describe *what changed and why*, not just "update file"
 
 ```bash
 git add kryds_og_bolle.html
-git commit -m "feat: ..."
+git commit -m "feat: add AI opponent with minimax algorithm"
 git push
 ```
