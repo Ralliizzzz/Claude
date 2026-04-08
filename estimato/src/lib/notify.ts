@@ -99,7 +99,7 @@ export async function sendLeadSmsToCompany(
 
   const message = `Nyt lead fra ${lead.name} (${lead.price.toLocaleString("da-DK")} kr) – ${ACTION_LABEL[lead.action_type] ?? lead.action_type}. Tjek dit dashboard.`
 
-  const res = await fetch("https://gatewayapi.com/rest/mtsms", {
+  const res = await fetch("https://gatewayapi.eu/rest/mtsms", {
     method: "POST",
     headers: {
       Authorization: `Token ${token}`,
