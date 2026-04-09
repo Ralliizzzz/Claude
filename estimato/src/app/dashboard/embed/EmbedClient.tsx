@@ -13,21 +13,6 @@ export default function EmbedClient({
 
   const embedCode = `<div id="lead-widget"></div>\n<script src="${appUrl}/widget.js" data-company="${companyId}"></script>`;
 
-  const previewHtml = `<!DOCTYPE html>
-<html lang="da">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body { margin: 0; padding: 24px; font-family: Inter, sans-serif; background: #f9fafb; }
-  </style>
-</head>
-<body>
-  <div id="lead-widget"></div>
-  <script src="${appUrl}/widget.js" data-company="${companyId}"></script>
-</body>
-</html>`;
-
   function handleCopy() {
     navigator.clipboard.writeText(embedCode);
     setCopied(true);
@@ -65,7 +50,7 @@ export default function EmbedClient({
         <h2 className="text-sm font-semibold mb-2">Forhåndsvisning</h2>
         <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
           <iframe
-            srcDoc={previewHtml}
+            src={`/api/widget-preview/${companyId}`}
             title="Widget forhåndsvisning"
             className="w-full"
             style={{ height: "600px", border: "none" }}
