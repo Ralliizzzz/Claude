@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import type { CompanyRow } from "@/types/database";
+import LogoutButton from "./LogoutButton";
 
 export default async function DashboardLayout({
   children,
@@ -55,6 +56,7 @@ export default async function DashboardLayout({
               )}
             </div>
           )}
+          <LogoutButton />
         </div>
       </aside>
 
