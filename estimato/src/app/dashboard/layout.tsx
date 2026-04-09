@@ -40,6 +40,12 @@ export default async function DashboardLayout({
         <NavLink href="/dashboard/embed">Embed widget</NavLink>
 
         <div className="mt-auto">
+          <Link
+            href="/"
+            className="flex items-center gap-2 px-2 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors mb-2"
+          >
+            ← Forside
+          </Link>
           {company && (
             <div className="px-2 py-2 rounded-lg bg-gray-50 text-xs text-gray-500">
               <p className="font-medium text-gray-700 truncate">
