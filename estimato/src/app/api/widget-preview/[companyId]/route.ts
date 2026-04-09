@@ -1,9 +1,10 @@
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ companyId: string }> }
 ) {
   const { companyId } = await params
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://estimato-xi.vercel.app"
+  const reqUrl = new URL(req.url)
+  const appUrl = `${reqUrl.protocol}//${reqUrl.host}`
 
   const html = `<!DOCTYPE html>
 <html lang="da">
