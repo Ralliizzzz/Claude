@@ -4,20 +4,27 @@ import { setApiBase } from "./api"
 
 // Fanges med det samme — document.currentScript er null i event handlers
 const script = document.currentScript as HTMLScriptElement | null
-const companyId = script?.dataset?.company ?? script?.getAttribute("data-company") ?? ""
 const apiBase = script?.src ? new URL(script.src).origin : window.location.origin
 
 function mount() {
   setApiBase(apiBase)
 
-  if (!companyId) {
-    console.warn("[Estimato] Mangler data-company attribut på script-tagget.")
-    return
-  }
-
   const container = document.getElementById("lead-widget")
   if (!container) {
     console.warn("[Estimato] Fandt ikke <div id='lead-widget'> på siden.")
+    return
+  }
+
+  // companyId kan sidde på script-tagget ELLER på selve div'en
+  const companyId =
+    script?.dataset?.company ??
+    script?.getAttribute("data-company") ??
+    container.dataset.company ??
+    container.getAttribute("data-company") ??
+    ""
+
+  if (!companyId) {
+    console.warn("[Estimato] Mangler data-company attribut.")
     return
   }
 

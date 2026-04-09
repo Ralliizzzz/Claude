@@ -1,17 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function EmbedClient({
   companyId,
-  appUrl,
 }: {
   companyId: string;
   appUrl: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const mountedRef = useRef(false);
 
-  const embedCode = `<div id="lead-widget"></div>\n<script src="${appUrl}/widget.js" data-company="${companyId}"></script>`;
+  const embedCode = `<div id="lead-widget" data-company="${companyId}"></div>\n<script src="https://estimato-xi.vercel.app/widget.js"></script>`;
+
+  // Loader widget-scriptet direkte på siden — ingen iframe nødvendig
+  useEffect(() => {
+    if (mountedRef.current) return;
+    mountedRef.current = true;
+
+    const existing = document.getElementById("estimato-preview-script");
+    if (existing) existing.remove();
+
+    const script = document.createElement("script");
+    script.id = "estimato-preview-script";
+    script.src = "/widget.js?preview=1";
+    document.body.appendChild(script);
+
+    return () => {
+      script.remove();
+    };
+  }, []);
 
   function handleCopy() {
     navigator.clipboard.writeText(embedCode);
@@ -45,16 +63,11 @@ export default function EmbedClient({
         </p>
       </div>
 
-      {/* Live preview */}
+      {/* Live preview — widget monteres direkte her */}
       <div>
         <h2 className="text-sm font-semibold mb-2">Forhåndsvisning</h2>
-        <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
-          <iframe
-            src={`/api/widget-preview/${companyId}`}
-            title="Widget forhåndsvisning"
-            className="w-full"
-            style={{ height: "600px", border: "none" }}
-          />
+        <div className="border border-gray-200 rounded-xl p-6 bg-gray-50">
+          <div id="lead-widget" data-company={companyId} />
         </div>
       </div>
     </div>
