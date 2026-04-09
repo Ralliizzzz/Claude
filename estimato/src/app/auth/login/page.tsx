@@ -21,7 +21,11 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setError("Forkert email eller adgangskode.");
+      if (error.code === "email_not_confirmed") {
+        setError("Din email er ikke bekræftet endnu. Tjek din indbakke og klik på bekræftelseslinket.");
+      } else {
+        setError("Forkert email eller adgangskode.");
+      }
       setLoading(false);
       return;
     }
