@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import type { AddOn, Discount, IntervalRange, FlatRange } from "@/types/settings"
 import { savePriser, type PriserData } from "./actions"
+import { PREDEFINED_IDS } from "@/lib/predefined-add-ons"
 
 interface Props {
   initialData: PriserData
@@ -228,17 +229,40 @@ export default function PriserForm({ initialData }: Props) {
 
       {/* ── 2. Tilvalg ── */}
       <Section title="Tilvalg">
-        <p className="text-sm text-gray-500 mb-3">
-          Ekstra ydelser kunden kan vælge til. Vises i widget&apos;en efter prisberegningen.
+        <p className="text-sm text-gray-500 mb-4">
+          Tilvalg kunden kan vælge i widget&apos;en. Sæt pris til 0 for at skjule et tilvalg.
         </p>
-        {data.add_ons.length > 0 && (
+
+        {/* Foruddefinerede */}
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Foruddefinerede</p>
+        <div className="grid grid-cols-[1fr_140px] gap-2 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide px-1">
+          <span>Navn</span>
+          <span>Pris (kr)</span>
+        </div>
+        {data.add_ons.filter((a) => PREDEFINED_IDS.has(a.id as never)).map((a) => (
+          <div key={a.id} className="grid grid-cols-[1fr_140px] gap-2 mb-2">
+            <div className={`${input} bg-gray-50 text-gray-500 cursor-default`}>{a.name}</div>
+            <input
+              type="number"
+              min="0"
+              className={input}
+              value={a.price}
+              onChange={(e) => updateAddOn(a.id, "price", Number(e.target.value))}
+              placeholder="0"
+            />
+          </div>
+        ))}
+
+        {/* Egne tilvalg */}
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Egne tilvalg</p>
+        {data.add_ons.filter((a) => !PREDEFINED_IDS.has(a.id as never)).length > 0 && (
           <div className="grid grid-cols-[1fr_140px_auto] gap-2 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide px-1">
             <span>Navn</span>
             <span>Pris (kr)</span>
             <span />
           </div>
         )}
-        {data.add_ons.map((a) => (
+        {data.add_ons.filter((a) => !PREDEFINED_IDS.has(a.id as never)).map((a) => (
           <div key={a.id} className="grid grid-cols-[1fr_140px_auto] gap-2 mb-2">
             <input
               type="text"
@@ -263,7 +287,7 @@ export default function PriserForm({ initialData }: Props) {
           </div>
         ))}
         <button onClick={addAddOn} className={btnSecondary}>
-          + Tilføj tilvalg
+          + Tilføj eget tilvalg
         </button>
       </Section>
 

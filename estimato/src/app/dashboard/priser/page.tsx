@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import type { QuoteSettingsRow } from "@/types/database"
 import type { AddOn, Discount, IntervalRange, FlatRange } from "@/types/settings"
+import { PREDEFINED_ADD_ONS, PREDEFINED_IDS } from "@/lib/predefined-add-ons"
 import PriserForm from "./PriserForm"
 
 export default async function PriserPage() {
@@ -24,7 +25,14 @@ export default async function PriserPage() {
     price_per_sqm: row?.price_per_sqm ?? null,
     interval_ranges: (row?.interval_ranges ?? []) as unknown as IntervalRange[],
     flat_ranges: (row?.flat_ranges ?? []) as unknown as FlatRange[],
-    add_ons: (row?.add_ons ?? []) as unknown as AddOn[],
+    add_ons: (() => {
+      const stored = (row?.add_ons ?? []) as unknown as AddOn[]
+      const predefined = PREDEFINED_ADD_ONS.map(
+        (p) => stored.find((a) => a.id === p.id) ?? { ...p, price: 0 }
+      )
+      const custom = stored.filter((a) => !PREDEFINED_IDS.has(a.id as never))
+      return [...predefined, ...custom]
+    })(),
     discounts: (row?.discounts ?? []) as unknown as Discount[],
     minimum_price: row?.minimum_price ?? null,
   }

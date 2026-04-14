@@ -276,10 +276,10 @@ export default function App({ companyId }: AppProps) {
             </div>
           </div>
 
-          {settings.add_ons.length > 0 && (
+          {settings.add_ons.filter((a) => a.price > 0).length > 0 && (
             <div style={s.fieldset}>
               <label style={s.label}>Tilvalg</label>
-              {settings.add_ons.map((a) => (
+              {settings.add_ons.filter((a) => a.price > 0).map((a) => (
                 <label key={a.id} style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:0.88rem;">
                   <input
                     type="checkbox"
