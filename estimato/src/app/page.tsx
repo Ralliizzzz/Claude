@@ -114,7 +114,7 @@ export default function HomePage() {
             <div className="flex justify-center">
               <div id="lead-widget" data-company="5a5dd101-7be3-4035-9be3-8e87b94c2e89" className="w-full max-w-lg" />
               <Script
-                src="https://estimato-xi.vercel.app/widget.js"
+                src="https://estimato-xi.vercel.app/widget.js?v=2"
                 strategy="lazyOnload"
               />
             </div>
