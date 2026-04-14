@@ -18,7 +18,12 @@ export async function GET(
     return NextResponse.json({ error: "Virksomhed ikke fundet" }, { status: 404 })
   }
 
-  return NextResponse.json(data, {
+  const filtered = {
+    ...data,
+    add_ons: (data.add_ons as { price: number }[]).filter((a) => a.price > 0),
+  }
+
+  return NextResponse.json(filtered, {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Cache-Control": "public, max-age=60",
