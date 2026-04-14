@@ -96,7 +96,7 @@ export default function PriserForm({ initialData }: Props) {
       {/* ── 1. Prismodel ── */}
       <Section title="Prismodel">
         <div className="flex gap-2 mb-4">
-          {(["sqm", "interval"] as const).map((type) => (
+          {(["interval", "sqm"] as const).map((type) => (
             <button
               key={type}
               onClick={() => update("pricing_type", type)}

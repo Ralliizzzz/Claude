@@ -20,7 +20,7 @@ export default async function PriserPage() {
   const row = result.data as QuoteSettingsRow | null
 
   const initialData = {
-    pricing_type: (row?.pricing_type ?? "sqm") as "sqm" | "interval",
+    pricing_type: (row?.pricing_type ?? "interval") as "sqm" | "interval",
     price_per_sqm: row?.price_per_sqm ?? null,
     interval_ranges: (row?.interval_ranges ?? []) as unknown as IntervalRange[],
     flat_ranges: (row?.flat_ranges ?? []) as unknown as FlatRange[],
