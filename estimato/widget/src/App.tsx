@@ -112,7 +112,20 @@ export default function App({ companyId }: AppProps) {
       if (bbr.propertyType) setPropertyType(bbr.propertyType as PropertyType)
       setCustomerLat(bbr.lat)
       setCustomerLon(bbr.lon)
-      setOutOfRange(false)
+
+      // Afstandstjek med de friskfetchede koordinater (ikke fra state)
+      if (settings?.locations && settings.locations.length > 0) {
+        if (!bbr.lat || !bbr.lon) {
+          setOutOfRange(true)
+        } else {
+          const inRange = settings.locations.some(
+            (loc) => haversineKm(bbr.lat!, bbr.lon!, loc.lat, loc.lon) <= loc.max_distance_km
+          )
+          setOutOfRange(!inRange)
+        }
+      } else {
+        setOutOfRange(false)
+      }
     } catch {
       // BBR fejlede — brugeren angiver manuelt
     } finally {
@@ -122,23 +135,7 @@ export default function App({ companyId }: AppProps) {
 
   function goToPrice() {
     if (!settings || !sqm || Number(sqm) <= 0) return
-
-    // Afstandstjek — kun hvis virksomheden har konfigureret serviceområde
-    if (settings.locations && settings.locations.length > 0) {
-      if (!customerLat || !customerLon) {
-        // Brugeren har ikke valgt adresse fra autocomplete — vi mangler koordinater
-        setOutOfRange(true)
-        return
-      }
-      const inRange = settings.locations.some(
-        (loc) => haversineKm(customerLat, customerLon, loc.lat, loc.lon) <= loc.max_distance_km
-      )
-      if (!inRange) {
-        setOutOfRange(true)
-        return
-      }
-    }
-    setOutOfRange(false)
+    if (outOfRange) return
 
     const bd = calculatePrice(Number(sqm), settings, selectedAddOns, selectedDiscount, selectedFrequency)
     setBreakdown(bd)
@@ -282,8 +279,8 @@ export default function App({ companyId }: AppProps) {
           )}
 
           <button
-            style={s.btn + ((!addressText || !sqm) ? "opacity:0.5;" : "")}
-            disabled={!addressText || !sqm}
+            style={s.btn + ((!addressText || !sqm || outOfRange) ? "opacity:0.5;" : "")}
+            disabled={!addressText || !sqm || outOfRange}
             onClick={goToPrice}
           >
             Se min pris →
