@@ -62,14 +62,22 @@ export function calculatePrice(
   }
 
   // Transportgebyr
-  let transport_fee = 0
+  let transport_fee: PriceBreakdown["transport_fee"] = null
   const tf = settings.transport_fee
   if (tf?.enabled && tf.price_per_km > 0 && distanceKm !== null) {
     const billableKm = Math.max(0, distanceKm - (tf.base_distance_km ?? 0))
-    transport_fee = Math.round(billableKm * tf.price_per_km)
+    const amount = Math.round(billableKm * tf.price_per_km)
+    if (amount > 0) {
+      transport_fee = {
+        amount,
+        distance_km: Math.round(distanceKm * 10) / 10,
+        billable_km: Math.round(billableKm * 10) / 10,
+        price_per_km: tf.price_per_km,
+      }
+    }
   }
 
-  const total = base + addOnTotal + (discount?.value ?? 0) + (frequency_discount?.value ?? 0) + transport_fee
+  const total = base + addOnTotal + (discount?.value ?? 0) + (frequency_discount?.value ?? 0) + (transport_fee?.amount ?? 0)
 
   return { base, add_ons: addOns, discount, frequency_discount, transport_fee, total: Math.max(0, total) }
 }

@@ -327,10 +327,15 @@ export default function App({ companyId }: AppProps) {
                 <span style="color:#16a34a;">{breakdown.frequency_discount.value.toLocaleString("da-DK")} kr</span>
               </div>
             )}
-            {breakdown.transport_fee > 0 && (
+            {breakdown.transport_fee && (
               <div style={s.priceRow}>
-                <span>Transportgebyr</span>
-                <span>+{breakdown.transport_fee.toLocaleString("da-DK")} kr</span>
+                <div>
+                  <div>Transportgebyr</div>
+                  <div style="font-size:0.75rem;color:#9ca3af;margin-top:2px;">
+                    {breakdown.transport_fee.distance_km} km afstand · {breakdown.transport_fee.billable_km} km fakturerbart × {breakdown.transport_fee.price_per_km} kr/km
+                  </div>
+                </div>
+                <span style="white-space:nowrap;">+{breakdown.transport_fee.amount.toLocaleString("da-DK")} kr</span>
               </div>
             )}
             <div style={s.total}>

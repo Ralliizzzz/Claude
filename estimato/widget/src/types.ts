@@ -65,7 +65,7 @@ export interface PriceBreakdown {
   add_ons: { name: string; price: number }[]
   discount: { name: string; value: number } | null
   frequency_discount: { name: string; value: number } | null
-  transport_fee: number
+  transport_fee: { amount: number; distance_km: number; billable_km: number; price_per_km: number } | null
   total: number
 }
 

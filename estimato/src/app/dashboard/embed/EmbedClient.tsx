@@ -11,7 +11,7 @@ export default function EmbedClient({
   const [copied, setCopied] = useState(false);
   const mountedRef = useRef(false);
 
-  const embedCode = `<div id="lead-widget" data-company="${companyId}"></div>\n<script src="https://estimato-xi.vercel.app/widget.js?v=5"></script>`;
+  const embedCode = `<div id="lead-widget" data-company="${companyId}"></div>\n<script src="https://estimato-xi.vercel.app/widget.js?v=6"></script>`;
 
   // Loader widget-scriptet direkte på siden — ingen iframe nødvendig
   useEffect(() => {
@@ -23,7 +23,7 @@ export default function EmbedClient({
 
     const script = document.createElement("script");
     script.id = "estimato-preview-script";
-    script.src = `/widget.js?v=5&t=${Date.now()}`;
+    script.src = `/widget.js?v=6&t=${Date.now()}`;
     document.body.appendChild(script);
 
     return () => {
