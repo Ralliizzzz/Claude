@@ -50,6 +50,10 @@ CREATE TABLE public.quote_settings (
   minimum_price         NUMERIC(10,2),
   -- [{frequency: "weekly"|"every2weeks"|"every3weeks"|"every4weeks", discount_percentage: 10, enabled: true}]
   frequency_discounts   JSONB NOT NULL DEFAULT '[]',
+  -- {name, street_address, postal_code, city, country, lat, lon, max_distance_km}
+  main_location         JSONB NOT NULL DEFAULT '{}',
+  -- [{name, street_address, postal_code, city, country, lat, lon, max_distance_km}]
+  branch_locations      JSONB NOT NULL DEFAULT '[]',
   -- {mon: {open: "08:00", close: "16:00"}, ..., sat: null, sun: null}
   opening_hours   JSONB NOT NULL DEFAULT '{"mon":{"open":"08:00","close":"16:00"},"tue":{"open":"08:00","close":"16:00"},"wed":{"open":"08:00","close":"16:00"},"thu":{"open":"08:00","close":"16:00"},"fri":{"open":"08:00","close":"16:00"},"sat":null,"sun":null}',
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()

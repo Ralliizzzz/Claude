@@ -34,6 +34,13 @@ export interface FrequencyDiscount {
   enabled: boolean
 }
 
+export interface WidgetLocation {
+  name: string
+  lat: number
+  lon: number
+  max_distance_km: number
+}
+
 export interface QuoteSettings {
   pricing_type: "sqm" | "interval"
   price_per_sqm: number | null
@@ -43,6 +50,7 @@ export interface QuoteSettings {
   discounts: Discount[]
   minimum_price: number | null
   frequency_discounts: FrequencyDiscount[]
+  locations?: WidgetLocation[]
 }
 
 export interface PriceBreakdown {

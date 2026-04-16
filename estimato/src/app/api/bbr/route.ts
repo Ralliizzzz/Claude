@@ -74,10 +74,16 @@ export async function GET(req: Request) {
       }
     }
 
+    const coords: number[] | undefined = addr?.adgangspunkt?.koordinater
+    const lon: number | null = coords?.[0] ?? null
+    const lat: number | null = coords?.[1] ?? null
+
     return NextResponse.json({
       address: addr.adressebetegnelse,
       sqm,
       propertyType,
+      lat,
+      lon,
     })
   }
 

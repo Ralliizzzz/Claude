@@ -1,8 +1,19 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import type { QuoteSettingsRow } from "@/types/database"
-import type { OpeningHours } from "@/types/settings"
+import type { OpeningHours, Location } from "@/types/settings"
 import SettingsForm from "./SettingsForm"
+
+const EMPTY_LOCATION: Location = {
+  name: "",
+  street_address: "",
+  postal_code: "",
+  city: "",
+  country: "Danmark",
+  lat: null,
+  lon: null,
+  max_distance_km: 0,
+}
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -13,11 +24,11 @@ export default async function SettingsPage() {
 
   const result = await supabase
     .from("quote_settings")
-    .select("opening_hours")
+    .select("opening_hours, main_location, branch_locations")
     .eq("company_id", user.id)
     .single()
 
-  const row = result.data as Pick<QuoteSettingsRow, "opening_hours"> | null
+  const row = result.data as Pick<QuoteSettingsRow, "opening_hours" | "main_location" | "branch_locations"> | null
 
   const openingHours = (row?.opening_hours ?? {
     mon: { open: "08:00", close: "16:00" },
@@ -29,13 +40,24 @@ export default async function SettingsPage() {
     sun: null,
   }) as unknown as OpeningHours
 
+  const mainLocation = (row?.main_location && Object.keys(row.main_location as object).length > 0
+    ? row.main_location
+    : EMPTY_LOCATION) as unknown as Location
+
+  const branchLocations = (row?.branch_locations ?? []) as unknown as Location[]
+
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-bold mb-1">Indstillinger</h1>
       <p className="text-sm text-gray-500 mb-8">
-        Konfigurer åbningstider og embed-kode til din widget.
+        Konfigurer serviceområde, åbningstider og embed-kode til din widget.
       </p>
-      <SettingsForm initialOpeningHours={openingHours} companyId={user.id} />
+      <SettingsForm
+        initialOpeningHours={openingHours}
+        initialMainLocation={mainLocation}
+        initialBranchLocations={branchLocations}
+        companyId={user.id}
+      />
     </div>
   )
 }

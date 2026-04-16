@@ -23,6 +23,14 @@ const s = {
   hint: "font-size:0.78rem;color:#6b7280;margin-top:4px;",
 }
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 const PROPERTY_LABELS: Record<PropertyType, string> = {
   house: "Villa / Hus",
   apartment: "Lejlighed",
@@ -53,6 +61,9 @@ export default function App({ companyId }: AppProps) {
   const [propertyType, setPropertyType] = useState<PropertyType>("house")
   const [sqm, setSqm] = useState<string>("")
   const [bbrLoading, setBbrLoading] = useState(false)
+  const [customerLat, setCustomerLat] = useState<number | null>(null)
+  const [customerLon, setCustomerLon] = useState<number | null>(null)
+  const [outOfRange, setOutOfRange] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Price step
@@ -99,6 +110,9 @@ export default function App({ companyId }: AppProps) {
       const bbr = await fetchBBRData(s.id)
       if (bbr.sqm) setSqm(String(Math.round(bbr.sqm)))
       if (bbr.propertyType) setPropertyType(bbr.propertyType as PropertyType)
+      setCustomerLat(bbr.lat)
+      setCustomerLon(bbr.lon)
+      setOutOfRange(false)
     } catch {
       // BBR fejlede — brugeren angiver manuelt
     } finally {
@@ -108,6 +122,19 @@ export default function App({ companyId }: AppProps) {
 
   function goToPrice() {
     if (!settings || !sqm || Number(sqm) <= 0) return
+
+    // Afstandstjek
+    if (settings.locations && settings.locations.length > 0 && customerLat && customerLon) {
+      const inRange = settings.locations.some(
+        (loc) => haversineKm(customerLat, customerLon, loc.lat, loc.lon) <= loc.max_distance_km
+      )
+      if (!inRange) {
+        setOutOfRange(true)
+        return
+      }
+    }
+    setOutOfRange(false)
+
     const bd = calculatePrice(Number(sqm), settings, selectedAddOns, selectedDiscount, selectedFrequency)
     setBreakdown(bd)
     setStep("price")
@@ -242,6 +269,12 @@ export default function App({ companyId }: AppProps) {
               <p style={s.hint}>m² kunne ikke hentes automatisk — angiv venligst manuelt.</p>
             )}
           </div>
+
+          {outOfRange && (
+            <p style="color:#ef4444;font-size:0.85rem;margin-bottom:8px;padding:10px 12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;">
+              Vi kører desværre ikke til din adresse. Kontakt os direkte for et tilbud.
+            </p>
+          )}
 
           <button
             style={s.btn + ((!addressText || !sqm) ? "opacity:0.5;" : "")}

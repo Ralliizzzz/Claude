@@ -23,7 +23,7 @@ export async function fetchAddressSuggestions(
 
 export async function fetchBBRData(
   id: string
-): Promise<{ address: string; sqm: number | null; propertyType: string | null }> {
+): Promise<{ address: string; sqm: number | null; propertyType: string | null; lat: number | null; lon: number | null }> {
   const res = await fetch(`${BASE}/api/bbr?mode=lookup&id=${id}`)
   if (!res.ok) throw new Error("BBR-opslag fejlede")
   return res.json()
