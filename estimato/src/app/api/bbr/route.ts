@@ -40,13 +40,16 @@ export async function GET(req: Request) {
 
     let sqm: number | null = null
     let propertyType: string | null = null
+    let rooms: number | null = null
+    let toilets: number | null = null
+    let bathrooms: number | null = null
+    let floors: number | null = null
 
     const username = process.env.DATAFORDELER_USERNAME
     const password = process.env.DATAFORDELER_PASSWORD
 
     if (username && password) {
       try {
-        // BBR AdresseIdentificerer = det fulde DAWA adresse-ID (ikke adgangsadresseid)
         const bbrRes = await fetch(
           `${BBR_BASE}/enhed?AdresseIdentificerer=${addressId}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&format=JSON`,
           { next: { revalidate: 0 } }
@@ -55,10 +58,10 @@ export async function GET(req: Request) {
           const bbrData = await bbrRes.json()
           const enhed = Array.isArray(bbrData) ? bbrData[0] : null
           if (enhed) {
-            sqm =
-              enhed.enh027ArealTilBeboelse ??
-              enhed.enh026EnhedensSamledeAreal ??
-              null
+            sqm = enhed.enh027ArealTilBeboelse ?? enhed.enh026EnhedensSamledeAreal ?? null
+            rooms = enhed.enh021AntalVærelser ?? null
+            toilets = enhed.enh023AntalVandskylledeToiletter ?? null
+            bathrooms = enhed.enh024AntalBadeværelser ?? null
 
             const anvend: string | undefined = enhed.enh020EnhedensAnvendelse
             if (anvend) {
@@ -66,6 +69,22 @@ export async function GET(req: Request) {
               if (["110", "120", "130", "185"].includes(kode)) propertyType = "house"
               else if (["140", "150", "160"].includes(kode)) propertyType = "apartment"
               else propertyType = "commercial"
+            }
+
+            // Hent antal etager fra bygning
+            const bygningId: string | undefined = enhed.enh016BygningElEjl
+            if (bygningId) {
+              try {
+                const bygRes = await fetch(
+                  `${BBR_BASE}/bygning?id=${bygningId}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&format=JSON`,
+                  { next: { revalidate: 0 } }
+                )
+                if (bygRes.ok) {
+                  const bygData = await bygRes.json()
+                  const byg = Array.isArray(bygData) ? bygData[0] : null
+                  if (byg) floors = byg.byg054AntalEtager ?? null
+                }
+              } catch { /* ignorér */ }
             }
           }
         }
@@ -82,6 +101,10 @@ export async function GET(req: Request) {
       address: addr.adressebetegnelse,
       sqm,
       propertyType,
+      rooms,
+      toilets,
+      bathrooms,
+      floors,
       lat,
       lon,
     })

@@ -6,7 +6,7 @@ import { calculatePrice } from "./calc"
 
 // ─── Styles ────────────────────────────────────────────────────────────────
 const s = {
-  wrap: "font-family:Inter,system-ui,sans-serif;max-width:480px;width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;box-sizing:border-box;",
+  wrap: "font-family:Inter,system-ui,sans-serif;max-width:700px;width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;box-sizing:border-box;",
   h2: "font-size:1.1rem;font-weight:700;margin:0 0 16px;color:#111;",
   label: "display:block;font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:4px;",
   input: "width:100%;border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:0.9rem;box-sizing:border-box;outline:none;",
@@ -44,6 +44,15 @@ const FREQUENCY_LABELS: Record<FrequencyKey, string> = {
   every4weeks: "Hver 4. uge",
 }
 
+function PropertyInfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style="display:flex;flex-direction:column;margin-bottom:8px;">
+      <span style="font-size:0.68rem;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">{label}</span>
+      <span style="font-size:0.82rem;color:#111;font-weight:500;margin-top:1px;">{value}</span>
+    </div>
+  )
+}
+
 interface AppProps {
   companyId: string
 }
@@ -65,6 +74,10 @@ export default function App({ companyId }: AppProps) {
   const [customerLon, setCustomerLon] = useState<number | null>(null)
   const [nearestDistanceKm, setNearestDistanceKm] = useState<number | null>(null)
   const [outOfRange, setOutOfRange] = useState(false)
+  const [bbrRooms, setBbrRooms] = useState<number | null>(null)
+  const [bbrToilets, setBbrToilets] = useState<number | null>(null)
+  const [bbrBathrooms, setBbrBathrooms] = useState<number | null>(null)
+  const [bbrFloors, setBbrFloors] = useState<number | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Price step
@@ -111,6 +124,10 @@ export default function App({ companyId }: AppProps) {
       const bbr = await fetchBBRData(s.id)
       if (bbr.sqm) setSqm(String(Math.round(bbr.sqm)))
       if (bbr.propertyType) setPropertyType(bbr.propertyType as PropertyType)
+      setBbrRooms(bbr.rooms)
+      setBbrToilets(bbr.toilets)
+      setBbrBathrooms(bbr.bathrooms)
+      setBbrFloors(bbr.floors)
       setCustomerLat(bbr.lat)
       setCustomerLon(bbr.lon)
 
@@ -299,114 +316,137 @@ export default function App({ companyId }: AppProps) {
       {/* ── Step: Price ── */}
       {step === "price" && breakdown && (
         <>
-          <button style="background:none;border:none;color:#6b7280;font-size:0.83rem;cursor:pointer;padding:0;margin-bottom:12px;" onClick={() => setStep("address")}>
+          <button style="background:none;border:none;color:#6b7280;font-size:0.83rem;cursor:pointer;padding:0;margin-bottom:16px;" onClick={() => setStep("address")}>
             ← Tilbage
           </button>
-          <h2 style={s.h2}>Din pris</h2>
 
-          <div style="margin-bottom:16px;">
-            <div style={s.priceRow}>
-              <span>Grundpris ({sqm} m²)</span>
-              <span>{breakdown.base.toLocaleString("da-DK")} kr</span>
+          <div style="display:flex;gap:20px;align-items:flex-start;">
+
+            {/* ── Boliginfo sidebar ── */}
+            <div style="flex:0 0 180px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px;font-size:0.82rem;">
+              <p style="font-size:0.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 10px;">Boliginfo</p>
+              <PropertyInfoRow label="Ejendomstype" value={PROPERTY_LABELS[propertyType]} />
+              <PropertyInfoRow label="Areal" value={`${sqm} m²`} />
+              {bbrFloors != null && <PropertyInfoRow label="Antal plan" value={String(bbrFloors)} />}
+              {bbrRooms != null && <PropertyInfoRow label="Værelser" value={String(bbrRooms)} />}
+              {(bbrToilets != null || bbrBathrooms != null) && (
+                <PropertyInfoRow
+                  label="Toilet / bad"
+                  value={[bbrToilets != null ? `${bbrToilets} toilet` : null, bbrBathrooms != null ? `${bbrBathrooms} bad` : null].filter(Boolean).join(" · ")}
+                />
+              )}
+              <p style="font-size:0.7rem;color:#d1d5db;margin:10px 0 0;line-height:1.3;">Data fra BBR</p>
             </div>
-            {breakdown.add_ons.map((a) => (
-              <div key={a.name} style={s.priceRow}>
-                <span>{a.name}</span>
-                <span>+{a.price.toLocaleString("da-DK")} kr</span>
-              </div>
-            ))}
-            {breakdown.discount && (
-              <div style={s.priceRow}>
-                <span>{breakdown.discount.name}</span>
-                <span style="color:#16a34a;">{breakdown.discount.value.toLocaleString("da-DK")} kr</span>
-              </div>
-            )}
-            {breakdown.frequency_discount && (
-              <div style={s.priceRow}>
-                <span>Hyppighedsrabat ({breakdown.frequency_discount.name})</span>
-                <span style="color:#16a34a;">{breakdown.frequency_discount.value.toLocaleString("da-DK")} kr</span>
-              </div>
-            )}
-            {breakdown.transport_fee && (
-              <div style={s.priceRow}>
-                <div>
-                  <div>Transportgebyr</div>
-                  <div style="font-size:0.75rem;color:#9ca3af;margin-top:2px;">
-                    {breakdown.transport_fee.distance_km} km afstand · {breakdown.transport_fee.billable_km} km fakturerbart × {breakdown.transport_fee.price_per_km} kr/km
-                  </div>
+
+            {/* ── Prisindhold ── */}
+            <div style="flex:1;min-width:0;">
+              <h2 style={s.h2}>Din pris</h2>
+
+              <div style="margin-bottom:16px;">
+                <div style={s.priceRow}>
+                  <span>Grundpris ({sqm} m²)</span>
+                  <span>{breakdown.base.toLocaleString("da-DK")} kr</span>
                 </div>
-                <span style="white-space:nowrap;">+{breakdown.transport_fee.amount.toLocaleString("da-DK")} kr</span>
+                {breakdown.add_ons.map((a) => (
+                  <div key={a.name} style={s.priceRow}>
+                    <span>{a.name}</span>
+                    <span>+{a.price.toLocaleString("da-DK")} kr</span>
+                  </div>
+                ))}
+                {breakdown.discount && (
+                  <div style={s.priceRow}>
+                    <span>{breakdown.discount.name}</span>
+                    <span style="color:#16a34a;">{breakdown.discount.value.toLocaleString("da-DK")} kr</span>
+                  </div>
+                )}
+                {breakdown.frequency_discount && (
+                  <div style={s.priceRow}>
+                    <span>Hyppighedsrabat ({breakdown.frequency_discount.name})</span>
+                    <span style="color:#16a34a;">{breakdown.frequency_discount.value.toLocaleString("da-DK")} kr</span>
+                  </div>
+                )}
+                {breakdown.transport_fee && (
+                  <div style={s.priceRow}>
+                    <div>
+                      <div>Transportgebyr</div>
+                      <div style="font-size:0.75rem;color:#9ca3af;margin-top:2px;">
+                        {breakdown.transport_fee.distance_km} km afstand · {breakdown.transport_fee.billable_km} km fakturerbart × {breakdown.transport_fee.price_per_km} kr/km
+                      </div>
+                    </div>
+                    <span style="white-space:nowrap;">+{breakdown.transport_fee.amount.toLocaleString("da-DK")} kr</span>
+                  </div>
+                )}
+                <div style={s.total}>
+                  <span>I alt</span>
+                  <span>{breakdown.total.toLocaleString("da-DK")} kr</span>
+                </div>
               </div>
-            )}
-            <div style={s.total}>
-              <span>I alt</span>
-              <span>{breakdown.total.toLocaleString("da-DK")} kr</span>
+
+              {settings.add_ons.filter((a) => a.price > 0).length > 0 && (
+                <div style={s.fieldset}>
+                  <label style={s.label}>Tilvalg</label>
+                  {settings.add_ons.filter((a) => a.price > 0).map((a) => (
+                    <label key={a.id} style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:0.88rem;">
+                      <input
+                        type="checkbox"
+                        checked={selectedAddOns.includes(a.id)}
+                        onChange={() => toggleAddOn(a.id)}
+                        style="width:16px;height:16px;accent-color:#3b82f6;"
+                      />
+                      <span style="flex:1;">{a.name}</span>
+                      <span style="color:#6b7280;">+{a.price.toLocaleString("da-DK")} kr</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {settings.frequency_discounts.length > 0 && (
+                <div style={s.fieldset}>
+                  <label style={s.label}>Hyppighedsrabat</label>
+                  {settings.frequency_discounts.map((f) => (
+                    <label key={f.frequency} style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:0.88rem;">
+                      <input
+                        type="radio"
+                        name="frequency"
+                        checked={selectedFrequency === f.frequency}
+                        onClick={() => setSelectedFrequency(selectedFrequency === f.frequency ? null : f.frequency)}
+                        onChange={() => {}}
+                        style="width:16px;height:16px;accent-color:#3b82f6;"
+                      />
+                      <span style="flex:1;">{FREQUENCY_LABELS[f.frequency]}</span>
+                      <span style="color:#16a34a;">-{f.discount_percentage}%</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {settings.discounts.length > 0 && (
+                <div style={s.fieldset}>
+                  <label style={s.label}>Rabat</label>
+                  {settings.discounts.map((d) => (
+                    <label key={d.id} style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:0.88rem;">
+                      <input
+                        type="radio"
+                        name="discount"
+                        checked={selectedDiscount === d.id}
+                        onClick={() => setSelectedDiscount(selectedDiscount === d.id ? null : d.id)}
+                        onChange={() => {}}
+                        style="width:16px;height:16px;accent-color:#3b82f6;"
+                      />
+                      <span style="flex:1;">{d.name}</span>
+                      <span style="color:#16a34a;">
+                        {d.type === "percent" ? `-${d.value}%` : `-${d.value.toLocaleString("da-DK")} kr`}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              <button style={s.btn} onClick={() => setStep("action")}>
+                Gå videre →
+              </button>
             </div>
           </div>
-
-          {settings.add_ons.filter((a) => a.price > 0).length > 0 && (
-            <div style={s.fieldset}>
-              <label style={s.label}>Tilvalg</label>
-              {settings.add_ons.filter((a) => a.price > 0).map((a) => (
-                <label key={a.id} style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:0.88rem;">
-                  <input
-                    type="checkbox"
-                    checked={selectedAddOns.includes(a.id)}
-                    onChange={() => toggleAddOn(a.id)}
-                    style="width:16px;height:16px;accent-color:#3b82f6;"
-                  />
-                  <span style="flex:1;">{a.name}</span>
-                  <span style="color:#6b7280;">+{a.price.toLocaleString("da-DK")} kr</span>
-                </label>
-              ))}
-            </div>
-          )}
-
-          {settings.frequency_discounts.length > 0 && (
-            <div style={s.fieldset}>
-              <label style={s.label}>Hyppighedsrabat</label>
-              {settings.frequency_discounts.map((f) => (
-                <label key={f.frequency} style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:0.88rem;">
-                  <input
-                    type="radio"
-                    name="frequency"
-                    checked={selectedFrequency === f.frequency}
-                    onClick={() => setSelectedFrequency(selectedFrequency === f.frequency ? null : f.frequency)}
-                    onChange={() => {}}
-                    style="width:16px;height:16px;accent-color:#3b82f6;"
-                  />
-                  <span style="flex:1;">{FREQUENCY_LABELS[f.frequency]}</span>
-                  <span style="color:#16a34a;">-{f.discount_percentage}%</span>
-                </label>
-              ))}
-            </div>
-          )}
-
-          {settings.discounts.length > 0 && (
-            <div style={s.fieldset}>
-              <label style={s.label}>Rabat</label>
-              {settings.discounts.map((d) => (
-                <label key={d.id} style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;font-size:0.88rem;">
-                  <input
-                    type="radio"
-                    name="discount"
-                    checked={selectedDiscount === d.id}
-                    onClick={() => setSelectedDiscount(selectedDiscount === d.id ? null : d.id)}
-                    onChange={() => {}}
-                    style="width:16px;height:16px;accent-color:#3b82f6;"
-                  />
-                  <span style="flex:1;">{d.name}</span>
-                  <span style="color:#16a34a;">
-                    {d.type === "percent" ? `-${d.value}%` : `-${d.value.toLocaleString("da-DK")} kr`}
-                  </span>
-                </label>
-              ))}
-            </div>
-          )}
-
-          <button style={s.btn} onClick={() => setStep("action")}>
-            Gå videre →
-          </button>
         </>
       )}
 
