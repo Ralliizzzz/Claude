@@ -13,6 +13,7 @@ const c = {
   gray50: "#f9fafb",
   gray100: "#f3f4f6",
   gray200: "#e5e7eb",
+  gray300: "#d1d5db",
   gray400: "#9ca3af",
   gray500: "#6b7280",
   gray700: "#374151",
@@ -33,12 +34,12 @@ const s = {
   btn: `width:100%;background:${c.blue};color:#fff;border:none;border-radius:12px;padding:15px 24px;font-size:0.95rem;font-weight:700;cursor:pointer;margin-top:18px;font-family:${font};letter-spacing:0.01em;`,
   btnDisabled: "opacity:0.4;cursor:not-allowed;",
   btnBack: `background:none;border:none;color:${c.gray400};font-size:0.82rem;cursor:pointer;padding:0;margin-bottom:24px;font-family:${font};display:flex;align-items:center;gap:5px;`,
-  fieldset: "margin-bottom:20px;",
   hint: `font-size:0.78rem;color:${c.gray400};margin-top:6px;`,
   error: `color:${c.red};font-size:0.85rem;padding:12px 16px;background:${c.redLight};border:1px solid ${c.redBorder};border-radius:10px;margin-top:10px;`,
-  priceRow: `display:flex;justify-content:space-between;align-items:center;font-size:0.9rem;padding:11px 18px;border-bottom:1px solid ${c.gray100};`,
   h2: `font-size:1.4rem;font-weight:800;margin:0 0 5px;color:${c.gray900};letter-spacing:-0.02em;`,
-  subtitle: `font-size:0.87rem;color:${c.gray500};margin:0 0 26px;line-height:1.5;`,
+  subtitle: `font-size:0.87rem;color:${c.gray500};margin:0 0 20px;line-height:1.5;`,
+  section: "margin-bottom:28px;",
+  sectionLabel: `font-size:0.7rem;font-weight:700;color:${c.gray400};text-transform:uppercase;letter-spacing:0.08em;margin:0 0 12px;`,
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -95,7 +96,9 @@ function Progress({ step }: { step: Step }) {
                 completed ? `background:${c.blue};color:#fff;` : active ? `background:${c.blue};color:#fff;` : `background:${c.gray100};color:${c.gray400};`
               }`}>
                 {completed && idx < n ? (
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
                 ) : String(idx)}
               </div>
               <span style={`font-size:0.67rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:${active || completed ? c.blue : c.gray400};`}>{label}</span>
@@ -109,11 +112,111 @@ function Progress({ step }: { step: Step }) {
 
 function BackBtn({ onClick }: { onClick: () => void }) {
   return (
-    <button style={s.btnBack} onClick={onClick}>
-      ← Tilbage
-    </button>
+    <button style={s.btnBack} onClick={onClick}>← Tilbage</button>
   )
 }
+
+// Selectable card — works for both multi-select (add-ons) and single-select (frequency/discount)
+interface SelectCardProps {
+  selected: boolean
+  onClick: () => void
+  title: string
+  subtitle?: string
+  badge?: string
+}
+
+function SelectCard({ selected, onClick, title, subtitle, badge }: SelectCardProps) {
+  return (
+    <div
+      onClick={onClick}
+      style={`position:relative;border:2px solid ${selected ? c.blue : c.gray200};background:${selected ? c.blueLight : "#fff"};border-radius:14px;padding:14px 16px;cursor:pointer;transition:border-color 0.15s,background 0.15s;box-shadow:${selected ? `0 0 0 1px ${c.blue}20` : "none"};`}
+    >
+      {selected && (
+        <div style={`position:absolute;top:-9px;right:-9px;width:20px;height:20px;border-radius:50%;background:${c.blue};display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(37,99,235,0.4);`}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+      )}
+      <div style={`font-weight:600;font-size:0.87rem;color:${selected ? c.blue : c.gray900};margin-bottom:${subtitle || badge ? "3px" : "0"};`}>{title}</div>
+      {subtitle && (
+        <div style={`font-size:0.76rem;color:${selected ? c.blue : c.gray500};`}>{subtitle}</div>
+      )}
+      {badge && (
+        <div style={`margin-top:6px;font-size:0.8rem;font-weight:700;color:${selected ? c.blue : c.green};`}>{badge}</div>
+      )}
+    </div>
+  )
+}
+
+// Price summary card with live updates
+function PriceSummary({ breakdown, sqm }: { breakdown: PriceBreakdown; sqm: string }) {
+  const savings = Math.abs((breakdown.discount?.value ?? 0) + (breakdown.frequency_discount?.value ?? 0))
+  return (
+    <div style={`background:${c.gray50};border:1.5px solid ${c.gray200};border-radius:16px;padding:20px 22px;`}>
+      <p style={s.sectionLabel}>Din prisberegning</p>
+
+      <div>
+        <PriceLine label={`Grundpris (${sqm} m²)`} value={`${breakdown.base.toLocaleString("da-DK")} kr`} />
+        {breakdown.add_ons.map((a) => (
+          <PriceLine key={a.name} label={a.name} value={`+${a.price.toLocaleString("da-DK")} kr`} />
+        ))}
+        {breakdown.transport_fee && (
+          <PriceLine
+            label={`Kørsel (${breakdown.transport_fee.billable_km} km × ${breakdown.transport_fee.price_per_km} kr/km)`}
+            value={`+${breakdown.transport_fee.amount.toLocaleString("da-DK")} kr`}
+          />
+        )}
+        {breakdown.discount && (
+          <PriceLine label={breakdown.discount.name} value={`${breakdown.discount.value.toLocaleString("da-DK")} kr`} green />
+        )}
+        {breakdown.frequency_discount && (
+          <PriceLine
+            label={`Hyppighedsrabat (${breakdown.frequency_discount.name})`}
+            value={`${breakdown.frequency_discount.value.toLocaleString("da-DK")} kr`}
+            green
+          />
+        )}
+      </div>
+
+      <div style={`height:1px;background:${c.gray300};margin:16px 0;`} />
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+        <div>
+          <div style={`font-size:0.7rem;font-weight:700;color:${c.gray400};text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px;`}>I alt inkl. moms</div>
+          <div style={`font-size:2.1rem;font-weight:800;color:${c.blue};letter-spacing:-0.03em;line-height:1;`}>
+            {breakdown.total.toLocaleString("da-DK")} <span style="font-size:1.1rem;font-weight:700;">kr</span>
+          </div>
+        </div>
+        {savings > 0 && (
+          <div style={`text-align:right;background:${c.greenLight};border:1px solid #bbf7d0;border-radius:10px;padding:8px 12px;`}>
+            <div style={`font-size:0.7rem;font-weight:700;color:${c.green};text-transform:uppercase;letter-spacing:0.06em;`}>Du sparer</div>
+            <div style={`font-size:1.05rem;font-weight:800;color:${c.green};`}>{savings.toLocaleString("da-DK")} kr</div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PriceLine({ label, value, green }: { label: string; value: string; green?: boolean }) {
+  return (
+    <div style={`display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid ${c.gray100};`}>
+      <span style={`font-size:0.85rem;color:${green ? c.green : c.gray700};`}>{label}</span>
+      <span style={`font-size:0.85rem;font-weight:600;color:${green ? c.green : c.gray900};`}>{value}</span>
+    </div>
+  )
+}
+
+function BbrChip({ children }: { children: ComponentChildren }) {
+  return (
+    <span style={`display:inline-flex;align-items:center;font-size:0.75rem;color:${c.gray500};background:${c.gray50};border:1px solid ${c.gray200};border-radius:6px;padding:3px 8px;`}>
+      {children}
+    </span>
+  )
+}
+
+// ─── App ───────────────────────────────────────────────────────────────────
 
 interface AppProps {
   companyId: string
@@ -175,14 +278,14 @@ export default function App({ companyId }: AppProps) {
     }, 300)
   }
 
-  async function onSelectSuggestion(s: { text: string; id: string }) {
-    setAddressText(s.text)
-    setAddressId(s.id)
+  async function onSelectSuggestion(sg: { text: string; id: string }) {
+    setAddressText(sg.text)
+    setAddressId(sg.id)
     setSuggestions([])
     setShowSuggestions(false)
     setBbrLoading(true)
     try {
-      const bbr = await fetchBBRData(s.id)
+      const bbr = await fetchBBRData(sg.id)
       if (bbr.sqm) setSqm(String(Math.round(bbr.sqm)))
       if (bbr.propertyType) setPropertyType(bbr.propertyType as PropertyType)
       setBbrRooms(bbr.rooms)
@@ -205,9 +308,7 @@ export default function App({ companyId }: AppProps) {
           setOutOfRange(nearest.loc.max_distance_km > 0 && nearest.km > nearest.loc.max_distance_km)
         }
       } else {
-        if (bbr.lat && bbr.lon && settings?.locations?.length === 0) {
-          setNearestDistanceKm(null)
-        }
+        if (bbr.lat && bbr.lon && settings?.locations?.length === 0) setNearestDistanceKm(null)
         setOutOfRange(false)
       }
     } catch { /* ignore */ } finally {
@@ -223,9 +324,7 @@ export default function App({ companyId }: AppProps) {
   }
 
   function toggleAddOn(id: string) {
-    setSelectedAddOns((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    )
+    setSelectedAddOns((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
   }
 
   useEffect(() => {
@@ -299,8 +398,7 @@ export default function App({ companyId }: AppProps) {
           <h2 style={s.h2}>Beregn din pris</h2>
           <p style={s.subtitle}>Tast din adresse og vi henter resten fra BBR automatisk.</p>
 
-          {/* Adresse */}
-          <div style={s.fieldset}>
+          <div style="margin-bottom:20px;">
             <div
               style="position:relative;"
               tabIndex={-1}
@@ -316,9 +414,7 @@ export default function App({ companyId }: AppProps) {
                 onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                 autoComplete="off"
               />
-              {bbrLoading && (
-                <p style={s.hint}>Henter ejendomsdata fra BBR...</p>
-              )}
+              {bbrLoading && <p style={s.hint}>Henter ejendomsdata fra BBR...</p>}
               {showSuggestions && suggestions.length > 0 && (
                 <div style={`position:absolute;z-index:99;width:100%;background:#fff;border:1.5px solid ${c.gray200};border-top:none;border-radius:0 0 10px 10px;box-shadow:0 8px 16px rgba(0,0,0,0.08);`}>
                   {suggestions.map((sg) => (
@@ -335,8 +431,7 @@ export default function App({ companyId }: AppProps) {
             </div>
           </div>
 
-          {/* Ejendomstype */}
-          <div style={s.fieldset}>
+          <div style="margin-bottom:20px;">
             <label style={s.label}>Ejendomstype</label>
             <div style={`display:flex;border:1.5px solid ${c.gray200};border-radius:10px;overflow:hidden;`}>
               {(["house", "apartment", "commercial"] as PropertyType[]).map((t, i) => (
@@ -351,8 +446,7 @@ export default function App({ companyId }: AppProps) {
             </div>
           </div>
 
-          {/* Størrelse */}
-          <div style={s.fieldset}>
+          <div style="margin-bottom:20px;">
             <label style={s.label}>Størrelse (m²)</label>
             <input
               style={s.input}
@@ -367,7 +461,6 @@ export default function App({ companyId }: AppProps) {
             )}
           </div>
 
-          {/* Uden for serviceområde */}
           {outOfRange && (
             <div style={`padding:12px 14px;background:${c.redLight};border:1px solid ${c.redBorder};border-radius:10px;margin-bottom:12px;`}>
               <p style={`color:${c.red};font-size:0.85rem;margin:0;font-weight:600;`}>Udenfor serviceområde</p>
@@ -392,8 +485,8 @@ export default function App({ companyId }: AppProps) {
           <h2 style={s.h2}>Din pris</h2>
           <p style={s.subtitle}>{addressText}</p>
 
-          {/* Boliginfo — kompakt chips under adressen */}
-          <div style={`display:flex;flex-wrap:wrap;gap:6px;margin-bottom:22px;margin-top:-16px;`}>
+          {/* BBR chips */}
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px;margin-top:-12px;">
             <BbrChip>{PROPERTY_LABELS[propertyType]}</BbrChip>
             <BbrChip>{sqm} m²</BbrChip>
             {bbrFloors != null && <BbrChip>{bbrFloors} plan</BbrChip>}
@@ -402,117 +495,68 @@ export default function App({ companyId }: AppProps) {
             {bbrToilets != null && <BbrChip>{bbrToilets} toilet</BbrChip>}
           </div>
 
-          {/* Prisspecifikation */}
-          <div style={`border:1.5px solid ${c.gray100};border-radius:14px;overflow:hidden;margin-bottom:22px;`}>
-            <div style={`padding:8px 12px;background:${c.gray50};border-bottom:1px solid ${c.gray100};`}>
-              <span style={`font-size:0.67rem;font-weight:700;color:${c.gray400};text-transform:uppercase;letter-spacing:0.07em;`}>Prisspecifikation</span>
-            </div>
-            <div style={s.priceRow}>
-              <span style={`color:${c.gray700};`}>Grundpris ({sqm} m²)</span>
-              <span style="font-weight:600;">{breakdown.base.toLocaleString("da-DK")} kr</span>
-            </div>
-            {breakdown.add_ons.map((a) => (
-              <div key={a.name} style={s.priceRow}>
-                <span style={`color:${c.gray700};`}>{a.name}</span>
-                <span style="font-weight:500;">+{a.price.toLocaleString("da-DK")} kr</span>
-              </div>
-            ))}
-            {breakdown.discount && (
-              <div style={s.priceRow}>
-                <span style={`color:${c.gray700};`}>{breakdown.discount.name}</span>
-                <span style={`color:${c.green};font-weight:500;`}>{breakdown.discount.value.toLocaleString("da-DK")} kr</span>
-              </div>
-            )}
-            {breakdown.frequency_discount && (
-              <div style={s.priceRow}>
-                <span style={`color:${c.gray700};`}>Hyppighedsrabat ({breakdown.frequency_discount.name})</span>
-                <span style={`color:${c.green};font-weight:500;`}>{breakdown.frequency_discount.value.toLocaleString("da-DK")} kr</span>
-              </div>
-            )}
-            {breakdown.transport_fee && (
-              <div style={s.priceRow}>
-                <div>
-                  <div style={`color:${c.gray700};`}>Transportgebyr</div>
-                  <div style={`font-size:0.75rem;color:${c.gray400};margin-top:2px;`}>
-                    {breakdown.transport_fee.billable_km} km × {breakdown.transport_fee.price_per_km} kr/km
-                  </div>
-                </div>
-                <span style="font-weight:500;">+{breakdown.transport_fee.amount.toLocaleString("da-DK")} kr</span>
-              </div>
-            )}
-            <div style={`display:flex;justify-content:space-between;align-items:center;padding:16px 18px;background:${c.blueLight};border-top:2px solid ${c.blueBorder};`}>
-              <span style={`font-weight:700;font-size:1rem;color:${c.gray900};`}>I alt inkl. moms</span>
-              <span style={`font-weight:800;font-size:1.3rem;color:${c.blue};letter-spacing:-0.02em;`}>{breakdown.total.toLocaleString("da-DK")} kr</span>
-            </div>
-          </div>
-
           {/* Tilvalg */}
           {settings.add_ons.filter((a) => a.price > 0).length > 0 && (
-            <div style={s.fieldset}>
-              <label style={s.label}>Tilvalg</label>
-              {settings.add_ons.filter((a) => a.price > 0).map((a) => (
-                <label key={a.id} style={`display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;font-size:0.88rem;border-bottom:1px solid ${c.gray100};`}>
-                  <input
-                    type="checkbox"
-                    checked={selectedAddOns.includes(a.id)}
-                    onChange={() => toggleAddOn(a.id)}
-                    style={`width:16px;height:16px;accent-color:${c.blue};flex-shrink:0;`}
+            <div style={s.section}>
+              <p style={s.sectionLabel}>Tilvalg</p>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">
+                {settings.add_ons.filter((a) => a.price > 0).map((a) => (
+                  <SelectCard
+                    key={a.id}
+                    selected={selectedAddOns.includes(a.id)}
+                    onClick={() => toggleAddOn(a.id)}
+                    title={a.name}
+                    badge={`+${a.price.toLocaleString("da-DK")} kr`}
                   />
-                  <span style={`flex:1;color:${c.gray700};`}>{a.name}</span>
-                  <span style={`color:${c.gray500};font-weight:500;`}>+{a.price.toLocaleString("da-DK")} kr</span>
-                </label>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
           {/* Hyppighedsrabat */}
           {settings.frequency_discounts.length > 0 && (
-            <div style={s.fieldset}>
-              <label style={s.label}>Hyppighedsrabat</label>
-              {settings.frequency_discounts.map((f) => (
-                <label key={f.frequency} style={`display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;font-size:0.88rem;border-bottom:1px solid ${c.gray100};`}>
-                  <input
-                    type="radio"
-                    name="frequency"
-                    checked={selectedFrequency === f.frequency}
+            <div style={s.section}>
+              <p style={s.sectionLabel}>Rengøringsfrekvens</p>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
+                {settings.frequency_discounts.map((f) => (
+                  <SelectCard
+                    key={f.frequency}
+                    selected={selectedFrequency === f.frequency}
                     onClick={() => setSelectedFrequency(selectedFrequency === f.frequency ? null : f.frequency)}
-                    onChange={() => {}}
-                    style={`width:16px;height:16px;accent-color:${c.blue};flex-shrink:0;`}
+                    title={FREQUENCY_LABELS[f.frequency]}
+                    badge={`-${f.discount_percentage}%`}
                   />
-                  <span style={`flex:1;color:${c.gray700};`}>{FREQUENCY_LABELS[f.frequency]}</span>
-                  <span style={`color:${c.green};font-weight:600;`}>-{f.discount_percentage}%</span>
-                </label>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
           {/* Rabatter */}
           {settings.discounts.length > 0 && (
-            <div style={s.fieldset}>
-              <label style={s.label}>Rabat</label>
-              {settings.discounts.map((d) => (
-                <label key={d.id} style={`display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;font-size:0.88rem;border-bottom:1px solid ${c.gray100};`}>
-                  <input
-                    type="radio"
-                    name="discount"
-                    checked={selectedDiscount === d.id}
+            <div style={s.section}>
+              <p style={s.sectionLabel}>Rabat</p>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">
+                {settings.discounts.map((d) => (
+                  <SelectCard
+                    key={d.id}
+                    selected={selectedDiscount === d.id}
                     onClick={() => setSelectedDiscount(selectedDiscount === d.id ? null : d.id)}
-                    onChange={() => {}}
-                    style={`width:16px;height:16px;accent-color:${c.blue};flex-shrink:0;`}
+                    title={d.name}
+                    badge={d.type === "percent" ? `-${d.value}%` : `-${d.value.toLocaleString("da-DK")} kr`}
                   />
-                  <span style={`flex:1;color:${c.gray700};`}>{d.name}</span>
-                  <span style={`color:${c.green};font-weight:600;`}>
-                    {d.type === "percent" ? `-${d.value}%` : `-${d.value.toLocaleString("da-DK")} kr`}
-                  </span>
-                </label>
-              ))}
+                ))}
+              </div>
             </div>
           )}
+
+          {/* Price summary */}
+          <div style="margin-bottom:4px;">
+            <PriceSummary breakdown={breakdown} sqm={sqm} />
+          </div>
 
           <button style={s.btn} onClick={() => setStep("action")}>
             Gå videre →
           </button>
-
         </>
       )}
 
@@ -538,7 +582,7 @@ export default function App({ companyId }: AppProps) {
                 onClick={() => setAction(a)}
                 style={`border:2px solid ${active ? c.blue : c.gray200};background:${active ? c.blueLight : "#fff"};border-radius:14px;padding:16px 20px;cursor:pointer;margin-bottom:10px;transition:border-color 0.15s,background 0.15s;`}
               >
-                <div style={`display:flex;align-items:center;gap:14px;`}>
+                <div style="display:flex;align-items:center;gap:14px;">
                   <span style={`font-size:1.5rem;line-height:1;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:${active ? "#fff" : c.gray50};border-radius:10px;flex-shrink:0;`}>{meta.icon}</span>
                   <div style="flex:1;">
                     <div style={`font-weight:700;font-size:0.95rem;color:${active ? c.blue : c.gray900};margin-bottom:3px;`}>{meta.title}</div>
@@ -569,25 +613,25 @@ export default function App({ companyId }: AppProps) {
           <h2 style={s.h2}>Dine oplysninger</h2>
           <p style={s.subtitle}>Vi kontakter dig hurtigst muligt.</p>
 
-          <div style={s.fieldset}>
+          <div style="margin-bottom:20px;">
             <label style={s.label}>Fulde navn *</label>
             <input style={s.input} type="text" value={name} placeholder="Dit fulde navn" onInput={(e) => setName((e.target as HTMLInputElement).value)} />
           </div>
 
           {(action === "email" || action === "book") && (
-            <div style={s.fieldset}>
+            <div style="margin-bottom:20px;">
               <label style={s.label}>Email *</label>
               <input style={s.input} type="email" value={email} placeholder="din@email.dk" onInput={(e) => setEmail((e.target as HTMLInputElement).value)} />
             </div>
           )}
 
-          <div style={s.fieldset}>
+          <div style="margin-bottom:20px;">
             <label style={s.label}>Telefon *</label>
             <input style={s.input} type="tel" value={phone} placeholder="+45 12 34 56 78" onInput={(e) => setPhone((e.target as HTMLInputElement).value)} />
           </div>
 
           {action === "book" && slots.length > 0 && (
-            <div style={s.fieldset}>
+            <div style="margin-bottom:20px;">
               <label style={s.label}>Vælg tid *</label>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:200px;overflow-y:auto;">
                 {slots.map((slot) => {
@@ -614,11 +658,7 @@ export default function App({ companyId }: AppProps) {
             const disabled = !name || !phone || (action !== "callback" && !email) || (action === "book" && !selectedSlot) || submitting
             const label = submitting ? "Sender..." : action === "book" ? "Book tid" : action === "callback" ? "Bliv ringet op" : "Send tilbud"
             return (
-              <button
-                style={s.btn + (disabled ? s.btnDisabled : "")}
-                disabled={disabled}
-                onClick={handleSubmit}
-              >
+              <button style={s.btn + (disabled ? s.btnDisabled : "")} disabled={disabled} onClick={handleSubmit}>
                 {label}
               </button>
             )
@@ -646,23 +686,6 @@ export default function App({ companyId }: AppProps) {
           </p>
         </div>
       )}
-    </div>
-  )
-}
-
-function BbrChip({ children }: { children: ComponentChildren }) {
-  return (
-    <span style={`display:inline-flex;align-items:center;font-size:0.75rem;color:${c.gray500};background:${c.gray50};border:1px solid ${c.gray200};border-radius:6px;padding:3px 8px;`}>
-      {children}
-    </span>
-  )
-}
-
-function InfoPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={`background:#fff;border:1px solid ${c.gray200};border-radius:8px;padding:8px 10px;`}>
-      <span style={`display:block;font-size:0.62rem;color:${c.gray400};font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;`}>{label}</span>
-      <span style={`display:block;font-size:0.88rem;color:${c.gray900};font-weight:700;`}>{value}</span>
     </div>
   )
 }
