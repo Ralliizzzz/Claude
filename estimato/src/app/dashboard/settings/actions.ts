@@ -3,6 +3,27 @@
 import { createClient } from "@/lib/supabase/server"
 import type { OpeningHours, Location } from "@/types/settings"
 
+export async function saveContactInfo(
+  companyName: string,
+  email: string,
+  phone: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { error: "Ikke autoriseret" }
+
+  const { error } = await supabase
+    .from("companies")
+    .update({ company_name: companyName, email, phone: phone || null })
+    .eq("id", user.id)
+
+  if (error) return { error: "Kunne ikke gemme kontaktoplysninger" }
+  return {}
+}
+
 const DAWA_BASE = "https://api.dataforsyningen.dk"
 
 async function geocodeLocation(loc: Location): Promise<Location> {

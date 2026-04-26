@@ -22,13 +22,21 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect("/auth/login")
 
-  const result = await supabase
-    .from("quote_settings")
-    .select("opening_hours, main_location, branch_locations")
-    .eq("company_id", user.id)
-    .single()
+  const [result, companyResult] = await Promise.all([
+    supabase
+      .from("quote_settings")
+      .select("opening_hours, main_location, branch_locations")
+      .eq("company_id", user.id)
+      .single(),
+    supabase
+      .from("companies")
+      .select("company_name, email, phone")
+      .eq("id", user.id)
+      .single(),
+  ])
 
   const row = result.data as Pick<QuoteSettingsRow, "opening_hours" | "main_location" | "branch_locations"> | null
+  const company = companyResult.data
 
   const openingHours = (row?.opening_hours ?? {
     mon: { open: "08:00", close: "16:00" },
@@ -57,6 +65,9 @@ export default async function SettingsPage() {
         initialMainLocation={mainLocation}
         initialBranchLocations={branchLocations}
         companyId={user.id}
+        initialCompanyName={company?.company_name ?? ""}
+        initialEmail={company?.email ?? ""}
+        initialPhone={company?.phone ?? ""}
       />
     </div>
   )

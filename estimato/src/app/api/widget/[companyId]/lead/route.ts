@@ -93,19 +93,17 @@ export async function POST(
       created_at: new Date().toISOString(),
     }
 
-    // Fire-and-forget — fejl logger men crasher ikke ruten
-    Promise.allSettled([
+    const results = await Promise.allSettled([
       sendLeadEmailToCompany(company, fullLead),
       sendLeadSmsToCompany(company, fullLead),
       body.action_type === "email"
         ? sendQuoteEmailToCustomer(company, fullLead)
         : Promise.resolve(),
-    ]).then((results) => {
-      results.forEach((r, i) => {
-        if (r.status === "rejected") {
-          console.error(`[notify] Notifikation ${i} fejlede:`, r.reason)
-        }
-      })
+    ])
+    results.forEach((r, i) => {
+      if (r.status === "rejected") {
+        console.error(`[notify] Notifikation ${i} fejlede:`, r.reason)
+      }
     })
   }
 

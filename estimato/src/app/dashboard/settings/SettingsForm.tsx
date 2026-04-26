@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef } from "react"
 import type { OpeningHours, DayKey, Location } from "@/types/settings"
-import { saveSettings, saveServiceArea } from "./actions"
+import { saveSettings, saveServiceArea, saveContactInfo } from "./actions"
 
 const DAY_LABELS: Record<string, string> = {
   mon: "Mandag",
@@ -31,6 +31,9 @@ interface Props {
   initialMainLocation: Location
   initialBranchLocations: Location[]
   companyId: string
+  initialCompanyName: string
+  initialEmail: string
+  initialPhone: string
 }
 
 export default function SettingsForm({
@@ -38,6 +41,9 @@ export default function SettingsForm({
   initialMainLocation,
   initialBranchLocations,
   companyId,
+  initialCompanyName,
+  initialEmail,
+  initialPhone,
 }: Props) {
   const [openingHours, setOpeningHours] = useState<OpeningHours>(initialOpeningHours)
   const [mainLocation, setMainLocation] = useState<Location>(initialMainLocation)
@@ -50,6 +56,23 @@ export default function SettingsForm({
 
   const [pendingHours, startHours] = useTransition()
   const [pendingArea, startArea] = useTransition()
+
+  // Contact info
+  const [companyName, setCompanyName] = useState(initialCompanyName)
+  const [contactEmail, setContactEmail] = useState(initialEmail)
+  const [contactPhone, setContactPhone] = useState(initialPhone)
+  const [savedContact, setSavedContact] = useState(false)
+  const [errorContact, setErrorContact] = useState<string | null>(null)
+  const [pendingContact, startContact] = useTransition()
+
+  function handleSaveContact() {
+    setErrorContact(null)
+    startContact(async () => {
+      const result = await saveContactInfo(companyName, contactEmail, contactPhone)
+      if (result.error) setErrorContact(result.error)
+      else setSavedContact(true)
+    })
+  }
 
   // ── Opening hours ────────────────────────────────────────────────────────
   function toggleDay(day: DayKey, open: boolean) {
@@ -95,6 +118,57 @@ export default function SettingsForm({
 
   return (
     <div className="flex flex-col gap-8">
+
+      {/* ── Kontaktoplysninger ── */}
+      <Section title="Kontaktoplysninger">
+        <p className="text-sm text-gray-500 mb-4">
+          Bruges til at sende dig email og SMS, når der kommer nye leads.
+        </p>
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Firmanavn</label>
+            <input
+              type="text"
+              className={input}
+              value={companyName}
+              onChange={(e) => { setCompanyName(e.target.value); setSavedContact(false) }}
+              placeholder="Jensens Rengøring ApS"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email til notifikationer</label>
+            <input
+              type="email"
+              className={input}
+              value={contactEmail}
+              onChange={(e) => { setContactEmail(e.target.value); setSavedContact(false) }}
+              placeholder="din@email.dk"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon til SMS-notifikationer</label>
+            <input
+              type="tel"
+              className={input}
+              value={contactPhone}
+              onChange={(e) => { setContactPhone(e.target.value); setSavedContact(false) }}
+              placeholder="+45 12 34 56 78"
+            />
+            <p className="text-xs text-gray-400 mt-1">Bruges til SMS når nye leads kommer ind.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 pt-4 mt-4 border-t border-gray-100">
+          <button
+            onClick={handleSaveContact}
+            disabled={pendingContact}
+            className="bg-blue-500 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors disabled:opacity-60"
+          >
+            {pendingContact ? "Gemmer..." : "Gem kontaktoplysninger"}
+          </button>
+          {savedContact && <span className="text-sm text-green-600 font-medium">✓ Gemt</span>}
+          {errorContact && <span className="text-sm text-red-500">{errorContact}</span>}
+        </div>
+      </Section>
 
       {/* ── Serviceområde ── */}
       <Section title="Serviceområde">
