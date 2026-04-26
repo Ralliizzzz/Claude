@@ -66,7 +66,8 @@ export default async function BookingsPage({ searchParams }: Props) {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Bookinger</h1>
+      <h1 className="text-2xl font-bold mb-1">Bookinger</h1>
+      <p className="text-sm text-gray-500 mb-6">Planlagte rengøringsbesøg fra din widget.</p>
       <BookingsTable
         upcoming={upcoming}
         past={past}

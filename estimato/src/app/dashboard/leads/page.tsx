@@ -43,7 +43,8 @@ export default async function LeadsPage({ searchParams }: Props) {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Leads</h1>
+      <h1 className="text-2xl font-bold mb-1">Leads</h1>
+      <p className="text-sm text-gray-500 mb-6">Kunder der har udfyldt din tilbudsberegner.</p>
       <LeadsTable leads={leads} counts={counts} activeStatus={status ?? "all"} />
     </div>
   )
