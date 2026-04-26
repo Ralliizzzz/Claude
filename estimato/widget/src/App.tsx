@@ -246,6 +246,8 @@ export default function App({ companyId }: AppProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Price
+  const [autoAddOns, setAutoAddOns] = useState<string[]>([])
+  const [hasPets, setHasPets] = useState<boolean | null>(null)
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([])
   const [selectedDiscount, setSelectedDiscount] = useState<string | null>(null)
   const [selectedFrequency, setSelectedFrequency] = useState<FrequencyKey | null>(null)
@@ -316,9 +318,25 @@ export default function App({ companyId }: AppProps) {
     }
   }
 
+  // Auto-select BBR-derived add-ons whenever floors/bathrooms/propertyType changes
+  useEffect(() => {
+    if (!settings) return
+    const hasAddon = (id: string) => settings.add_ons.some((a) => a.id === id)
+    const auto: string[] = []
+    if (bbrFloors != null && bbrFloors > 1) {
+      if (propertyType === "apartment" && hasAddon("addon_extra_floor_apt")) auto.push("addon_extra_floor_apt")
+      if (propertyType === "house"     && hasAddon("addon_extra_floor_house")) auto.push("addon_extra_floor_house")
+    }
+    if (bbrBathrooms != null && bbrBathrooms > 1 && hasAddon("addon_extra_bathroom")) {
+      auto.push("addon_extra_bathroom")
+    }
+    setAutoAddOns(auto)
+  }, [bbrFloors, bbrBathrooms, propertyType, settings])
+
   function goToPrice() {
     if (!settings || !sqm || Number(sqm) <= 0 || outOfRange) return
-    const bd = calculatePrice(Number(sqm), settings, selectedAddOns, selectedDiscount, selectedFrequency, nearestDistanceKm)
+    const allAddOns = [...autoAddOns, ...(hasPets ? ["addon_pets"] : []), ...selectedAddOns]
+    const bd = calculatePrice(Number(sqm), settings, allAddOns, selectedDiscount, selectedFrequency, nearestDistanceKm)
     setBreakdown(bd)
     setStep("price")
   }
@@ -329,9 +347,10 @@ export default function App({ companyId }: AppProps) {
 
   useEffect(() => {
     if (!settings || !sqm) return
-    const bd = calculatePrice(Number(sqm), settings, selectedAddOns, selectedDiscount, selectedFrequency, nearestDistanceKm)
+    const allAddOns = [...autoAddOns, ...(hasPets ? ["addon_pets"] : []), ...selectedAddOns]
+    const bd = calculatePrice(Number(sqm), settings, allAddOns, selectedDiscount, selectedFrequency, nearestDistanceKm)
     setBreakdown(bd)
-  }, [selectedAddOns, selectedDiscount, selectedFrequency, nearestDistanceKm, settings, sqm])
+  }, [autoAddOns, hasPets, selectedAddOns, selectedDiscount, selectedFrequency, nearestDistanceKm, settings, sqm])
 
   async function goToContact(chosenAction: ActionType) {
     setAction(chosenAction)
@@ -495,36 +514,84 @@ export default function App({ companyId }: AppProps) {
             {bbrToilets != null && <BbrChip>{bbrToilets} toilet</BbrChip>}
           </div>
 
-          {/* Tilvalg */}
-          {settings.add_ons.filter((a) => a.price > 0).length > 0 && (
+          {/* Auto-pålagte tillæg fra BBR (låst, ikke-klikbart) */}
+          {autoAddOns.length > 0 && (
             <div style={s.section}>
-              <p style={s.sectionLabel}>Tilvalg</p>
-              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">
-                {settings.add_ons.filter((a) => a.price > 0).map((a) => (
-                  <SelectCard
-                    key={a.id}
-                    selected={selectedAddOns.includes(a.id)}
-                    onClick={() => toggleAddOn(a.id)}
-                    title={a.name}
-                    badge={`+${a.price.toLocaleString("da-DK")} kr`}
-                  />
-                ))}
+              <p style={s.sectionLabel}>Inkluderet fra BBR</p>
+              <div style={`background:${c.gray50};border:1px solid ${c.gray200};border-radius:12px;overflow:hidden;`}>
+                {autoAddOns.map((id) => {
+                  const addon = settings.add_ons.find((a) => a.id === id)
+                  if (!addon) return null
+                  return (
+                    <div key={id} style={`display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid ${c.gray100};`}>
+                      <div style="display:flex;align-items:center;gap:8px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={c.gray400} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <span style={`font-size:0.85rem;color:${c.gray700};`}>{addon.name}</span>
+                      </div>
+                      <span style={`font-size:0.85rem;font-weight:600;color:${c.gray500};`}>+{addon.price.toLocaleString("da-DK")} kr</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
 
+          {/* Kæledyrsspørgsmål */}
+          {settings.add_ons.some((a) => a.id === "addon_pets") && (
+            <div style={s.section}>
+              <p style={s.sectionLabel}>Har du hund eller kat?</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <SelectCard
+                  selected={hasPets === false}
+                  onClick={() => setHasPets(false)}
+                  title="Nej"
+                  badge=""
+                />
+                <SelectCard
+                  selected={hasPets === true}
+                  onClick={() => setHasPets(true)}
+                  title="Ja"
+                  badge={`+${settings.add_ons.find((a) => a.id === "addon_pets")!.price.toLocaleString("da-DK")} kr`}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Custom tillæg (ikke-predefined) */}
+          {(() => {
+            const PREDEFINED = new Set(["addon_extra_floor_apt","addon_extra_floor_house","addon_extra_bathroom","addon_pets","addon_no_parking"])
+            const custom = settings.add_ons.filter((a) => !PREDEFINED.has(a.id))
+            if (custom.length === 0) return null
+            return (
+              <div style={s.section}>
+                <p style={s.sectionLabel}>Tilvalg</p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">
+                  {custom.map((a) => (
+                    <SelectCard
+                      key={a.id}
+                      selected={selectedAddOns.includes(a.id)}
+                      onClick={() => toggleAddOn(a.id)}
+                      title={a.name}
+                      badge={`+${a.price.toLocaleString("da-DK")} kr`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Hyppighedsrabat */}
           {settings.frequency_discounts.length > 0 && (
             <div style={s.section}>
-              <p style={s.sectionLabel}>Rengøringsfrekvens</p>
-              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
+              <p style={s.sectionLabel}>Hvor ofte skal vi gøre rent?</p>
+              <div style={`display:grid;grid-template-columns:repeat(${Math.min(settings.frequency_discounts.length, 4)},1fr);gap:10px;`}>
                 {settings.frequency_discounts.map((f) => (
                   <SelectCard
                     key={f.frequency}
                     selected={selectedFrequency === f.frequency}
                     onClick={() => setSelectedFrequency(selectedFrequency === f.frequency ? null : f.frequency)}
                     title={FREQUENCY_LABELS[f.frequency]}
-                    badge={`-${f.discount_percentage}%`}
+                    badge={f.discount_percentage > 0 ? `-${f.discount_percentage}%` : ""}
                   />
                 ))}
               </div>

@@ -34,7 +34,7 @@ export async function GET(
     ...rest,
     add_ons: (data.add_ons as { price: number }[]).filter((a) => a.price > 0),
     frequency_discounts: ((data.frequency_discounts ?? []) as { enabled: boolean; discount_percentage: number }[])
-      .filter((f) => f.enabled && f.discount_percentage > 0),
+      .filter((f) => f.enabled),
     ...(locations.length > 0 ? { locations } : {}),
     transport_fee: (data.transport_fee ?? { enabled: false, base_distance_km: 0, price_per_km: 0 }) as { enabled: boolean; base_distance_km: number; price_per_km: number },
   }
