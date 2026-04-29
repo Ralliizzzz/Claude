@@ -257,29 +257,29 @@ function Calendar({ availableDates, selectedDate, onSelect }: {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
   return (
-    <div style={`border:1.5px solid ${c.gray200};border-radius:12px;padding:10px 12px;background:#fff;`}>
+    <div style={`border:1.5px solid ${c.gray200};border-radius:12px;padding:8px;background:#fff;width:256px;box-sizing:border-box;`}>
       {/* Måned-navigation */}
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <button
           onClick={prevMonth}
-          style={`background:none;border:1px solid ${c.gray200};border-radius:6px;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:${c.gray500};font-family:${font};font-size:0.95rem;line-height:1;`}
+          style={`background:none;border:1px solid ${c.gray200};border-radius:5px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:${c.gray500};font-family:${font};font-size:0.9rem;line-height:1;flex-shrink:0;`}
         >‹</button>
-        <span style={`font-weight:700;font-size:0.82rem;color:${c.gray900};`}>{MONTH_NAMES[viewMonth]} {viewYear}</span>
+        <span style={`font-weight:700;font-size:0.78rem;color:${c.gray900};`}>{MONTH_NAMES[viewMonth]} {viewYear}</span>
         <button
           onClick={nextMonth}
-          style={`background:none;border:1px solid ${c.gray200};border-radius:6px;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:${c.gray500};font-family:${font};font-size:0.95rem;line-height:1;`}
+          style={`background:none;border:1px solid ${c.gray200};border-radius:5px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:${c.gray500};font-family:${font};font-size:0.9rem;line-height:1;flex-shrink:0;`}
         >›</button>
       </div>
 
       {/* Ugedage */}
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:2px;">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px;">
         {DAY_SHORT.map((d) => (
-          <div key={d} style={`text-align:center;font-size:0.6rem;font-weight:700;color:${c.gray400};text-transform:uppercase;letter-spacing:0.04em;padding:2px 0;`}>{d}</div>
+          <div key={d} style={`text-align:center;font-size:0.58rem;font-weight:700;color:${c.gray400};text-transform:uppercase;padding:1px 0;`}>{d}</div>
         ))}
       </div>
 
       {/* Dage */}
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">
         {cells.map((day, i) => {
           if (day === null) return <div key={`e${i}`} />
           const dateStr = toDateStr(new Date(viewYear, viewMonth, day))
@@ -294,11 +294,11 @@ function Calendar({ availableDates, selectedDate, onSelect }: {
               disabled={isPast || !isAvail}
               onClick={() => { if (!isPast && isAvail) onSelect(dateStr) }}
               style={`
-                height:30px;border:1.5px solid ${isSel ? c.blue : isToday && !isSel ? c.blue : "transparent"};
-                border-radius:6px;cursor:${isPast || !isAvail ? "default" : "pointer"};
+                height:31px;border:1.5px solid ${isSel ? c.blue : isToday && !isSel ? c.blue : "transparent"};
+                border-radius:5px;cursor:${isPast || !isAvail ? "default" : "pointer"};
                 background:${isSel ? c.blue : isAvail && !isPast ? c.blueLight : "transparent"};
                 color:${isSel ? "#fff" : isPast || !isAvail ? c.gray300 : c.gray900};
-                font-size:0.75rem;font-weight:${isToday || isSel ? "700" : "400"};
+                font-size:0.72rem;font-weight:${isToday || isSel ? "700" : "400"};
                 font-family:${font};padding:0;transition:background 0.1s,border-color 0.1s;
               `}
             >
@@ -797,18 +797,45 @@ export default function App({ companyId }: AppProps) {
         <>
           <BackBtn onClick={() => setStep("action")} />
           <h2 style={s.h2}>{action === "book" ? "Book tid" : "Dine oplysninger"}</h2>
-          <p style={s.subtitle}>{action === "book" ? "Vælg dato og tidspunkt, og udfyld dine kontaktoplysninger." : "Vi kontakter dig hurtigst muligt."}</p>
+          <p style={s.subtitle}>{action === "book" ? "Udfyld dine oplysninger og vælg dato og tidspunkt." : "Vi kontakter dig hurtigst muligt."}</p>
 
-          {/* ── Kalender (kun ved booking) ── */}
-          {action === "book" && (
-            <>
-              <div style={s.section}>
-                <p style={s.sectionLabel}>Vælg dato</p>
+          {/* ── To-kolonne layout ved booking ── */}
+          {action === "book" ? (
+            <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
+
+              {/* Venstre: kontaktoplysninger */}
+              <div style="flex:1;min-width:200px;">
+                <div style="margin-bottom:14px;">
+                  <label style={s.label}>Fulde navn *</label>
+                  <input style={s.input} type="text" value={name} placeholder="Dit fulde navn" onInput={(e) => setName((e.target as HTMLInputElement).value)} />
+                </div>
+                <div style="margin-bottom:14px;">
+                  <label style={s.label}>Email *</label>
+                  <input style={s.input} type="email" value={email} placeholder="din@email.dk" onInput={(e) => setEmail((e.target as HTMLInputElement).value)} />
+                </div>
+                <div style="margin-bottom:14px;">
+                  <label style={s.label}>Telefon *</label>
+                  <input style={s.input} type="tel" value={phone} placeholder="+45 12 34 56 78" onInput={(e) => setPhone((e.target as HTMLInputElement).value)} />
+                </div>
+                <div>
+                  <label style={s.label}>Bemærkninger <span style={`font-weight:400;color:${c.gray400};`}>(valgfrit)</span></label>
+                  <textarea
+                    style={`${s.input}min-height:80px;resize:vertical;line-height:1.5;`}
+                    placeholder="Eventuelle kommentarer…"
+                    value={notes}
+                    onInput={(e) => setNotes((e.target as HTMLTextAreaElement).value)}
+                  />
+                </div>
+              </div>
+
+              {/* Højre: kalender + tidsvalg */}
+              <div style="width:256px;flex-shrink:0;">
+                <p style={`${s.sectionLabel}margin-bottom:8px;`}>Vælg dato</p>
                 {loadingDates ? (
-                  <div style={`color:${c.gray400};font-size:0.85rem;padding:12px 0;`}>Henter ledige datoer…</div>
+                  <div style={`color:${c.gray400};font-size:0.83rem;`}>Henter datoer…</div>
                 ) : availableDates.length === 0 ? (
-                  <div style={`color:${c.gray500};font-size:0.85rem;padding:12px 16px;background:${c.gray50};border:1px solid ${c.gray200};border-radius:10px;`}>
-                    Ingen ledige tider de næste 30 dage. Kontakt os direkte.
+                  <div style={`color:${c.gray500};font-size:0.82rem;padding:10px 12px;background:${c.gray50};border:1px solid ${c.gray200};border-radius:10px;`}>
+                    Ingen ledige tider de næste 30 dage.
                   </div>
                 ) : (
                   <Calendar
@@ -817,86 +844,77 @@ export default function App({ companyId }: AppProps) {
                     onSelect={onSelectDate}
                   />
                 )}
+
+                {/* Tidsvindue — under kalenderen */}
+                {selectedDate && (
+                  <div style="margin-top:12px;">
+                    <p style={`${s.sectionLabel}margin-bottom:8px;`}>Vælg tidspunkt</p>
+                    {loadingSlots ? (
+                      <div style={`color:${c.gray400};font-size:0.83rem;`}>Henter tider…</div>
+                    ) : slotsForDate.length === 0 ? (
+                      <div style={`color:${c.gray500};font-size:0.82rem;padding:10px 12px;background:${c.gray50};border:1px solid ${c.gray200};border-radius:10px;`}>
+                        Ingen ledige tider denne dag.
+                      </div>
+                    ) : (
+                      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                        {slotsForDate.map((slot) => {
+                          const d = new Date(slot)
+                          const startH = d.toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })
+                          const endH = new Date(d.getTime() + 7200000).toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })
+                          const sel = selectedSlot === slot
+                          return (
+                            <button
+                              key={slot}
+                              onClick={() => setSelectedSlot(sel ? null : slot)}
+                              style={`border:1.5px solid ${sel ? c.blue : c.gray200};background:${sel ? c.blueLight : "#fff"};border-radius:8px;padding:7px 10px;font-size:0.8rem;cursor:pointer;font-family:${font};color:${sel ? c.blue : c.gray700};font-weight:${sel ? "700" : "500"};transition:all 0.15s;white-space:nowrap;`}
+                            >
+                              {startH} – {endH}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Tidsvindue-valg — vises når dato er valgt */}
-              {selectedDate && (
-                <div style={s.section}>
-                  <p style={s.sectionLabel}>
-                    Vælg tidspunkt —&nbsp;
-                    <span style={`font-weight:500;text-transform:none;color:${c.gray500};`}>
-                      {new Date(selectedDate + "T12:00:00").toLocaleDateString("da-DK", { weekday: "long", day: "numeric", month: "long" })}
-                    </span>
-                  </p>
-                  {loadingSlots ? (
-                    <div style={`color:${c.gray400};font-size:0.85rem;padding:8px 0;`}>Henter tider…</div>
-                  ) : slotsForDate.length === 0 ? (
-                    <div style={`color:${c.gray500};font-size:0.85rem;padding:12px 16px;background:${c.gray50};border:1px solid ${c.gray200};border-radius:10px;`}>
-                      Ingen ledige tider denne dag.
-                    </div>
-                  ) : (
-                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                      {slotsForDate.map((slot) => {
-                        const d = new Date(slot)
-                        const startH = d.toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })
-                        const endH = new Date(d.getTime() + 7200000).toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })
-                        const sel = selectedSlot === slot
-                        return (
-                          <button
-                            key={slot}
-                            onClick={() => setSelectedSlot(sel ? null : slot)}
-                            style={`border:2px solid ${sel ? c.blue : c.gray200};background:${sel ? c.blueLight : "#fff"};border-radius:10px;padding:10px 18px;font-size:0.87rem;cursor:pointer;font-family:${font};color:${sel ? c.blue : c.gray700};font-weight:${sel ? "700" : "500"};transition:all 0.15s;white-space:nowrap;`}
-                          >
-                            {startH} – {endH}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
+            </div>
+          ) : (
+            /* ── Enkelt-kolonne ved callback / email ── */
+            <div>
+              <div style="margin-bottom:14px;">
+                <label style={s.label}>Fulde navn *</label>
+                <input style={s.input} type="text" value={name} placeholder="Dit fulde navn" onInput={(e) => setName((e.target as HTMLInputElement).value)} />
+              </div>
+              {action === "email" && (
+                <div style="margin-bottom:14px;">
+                  <label style={s.label}>Email *</label>
+                  <input style={s.input} type="email" value={email} placeholder="din@email.dk" onInput={(e) => setEmail((e.target as HTMLInputElement).value)} />
                 </div>
               )}
-            </>
+              <div style="margin-bottom:14px;">
+                <label style={s.label}>Telefon *</label>
+                <input style={s.input} type="tel" value={phone} placeholder="+45 12 34 56 78" onInput={(e) => setPhone((e.target as HTMLInputElement).value)} />
+              </div>
+              <div>
+                <label style={s.label}>Bemærkninger <span style={`font-weight:400;color:${c.gray400};`}>(valgfrit)</span></label>
+                <textarea
+                  style={`${s.input}min-height:80px;resize:vertical;line-height:1.5;`}
+                  placeholder="Eventuelle kommentarer…"
+                  value={notes}
+                  onInput={(e) => setNotes((e.target as HTMLTextAreaElement).value)}
+                />
+              </div>
+            </div>
           )}
 
-          {/* ── Kontaktoplysninger ── */}
-          <div style={s.section}>
-            <p style={s.sectionLabel}>Kontaktoplysninger</p>
-
-            <div style="margin-bottom:14px;">
-              <label style={s.label}>Fulde navn *</label>
-              <input style={s.input} type="text" value={name} placeholder="Dit fulde navn" onInput={(e) => setName((e.target as HTMLInputElement).value)} />
-            </div>
-
-            {(action === "email" || action === "book") && (
-              <div style="margin-bottom:14px;">
-                <label style={s.label}>Email *</label>
-                <input style={s.input} type="email" value={email} placeholder="din@email.dk" onInput={(e) => setEmail((e.target as HTMLInputElement).value)} />
-              </div>
-            )}
-
-            <div style="margin-bottom:14px;">
-              <label style={s.label}>Telefon *</label>
-              <input style={s.input} type="tel" value={phone} placeholder="+45 12 34 56 78" onInput={(e) => setPhone((e.target as HTMLInputElement).value)} />
-            </div>
-
-            <div style="margin-bottom:4px;">
-              <label style={s.label}>Bemærkninger <span style={`font-weight:400;color:${c.gray400};`}>(valgfrit)</span></label>
-              <textarea
-                style={`${s.input}min-height:80px;resize:vertical;line-height:1.5;`}
-                placeholder="Eventuelle kommentarer…"
-                value={notes}
-                onInput={(e) => setNotes((e.target as HTMLTextAreaElement).value)}
-              />
-            </div>
-          </div>
-
-          {submitError && <p style={s.error}>{submitError}</p>}
+          {submitError && <p style={`${s.error}margin-top:16px;`}>{submitError}</p>}
 
           {(() => {
             const disabled = !name || !phone || (action !== "callback" && !email) || (action === "book" && (!selectedDate || !selectedSlot)) || submitting
             const label = submitting ? "Sender..." : action === "book" ? "Book tid" : action === "callback" ? "Bliv ringet op" : "Send tilbud"
             return (
-              <button style={s.btn + (disabled ? s.btnDisabled : "")} disabled={disabled} onClick={handleSubmit}>
+              <button style={`${s.btn}margin-top:20px;` + (disabled ? s.btnDisabled : "")} disabled={disabled} onClick={handleSubmit}>
                 {label}
               </button>
             )
