@@ -931,11 +931,11 @@ export default function App({ companyId }: AppProps) {
             </svg>
           </div>
           <h2 style={`font-size:1.5rem;font-weight:800;letter-spacing:-0.02em;margin:0 0 10px;color:${c.gray900};`}>
-            {action === "book" ? "Tak! Din tid er booket." : action === "callback" ? "Tak! Vi ringer dig op." : "Tak! Tilbuddet er sendt."}
+            {action === "book" ? "Tak! Din forespørgsel er modtaget." : action === "callback" ? "Tak! Vi ringer dig op." : "Tak! Tilbuddet er sendt."}
           </h2>
           <p style={`font-size:0.9rem;color:${c.gray500};max-width:340px;margin:0 auto;line-height:1.6;`}>
             {action === "book"
-              ? "Du vil modtage en bekræftelse på email. Vi ser frem til at møde dig!"
+              ? "Vi har sendt dig et overblik over tilbuddet på mail. Du modtager en bekræftelsesmail, så snart vi har godkendt din tid."
               : action === "callback"
               ? "Vi kontakter dig hurtigst muligt på det oplyste telefonnummer."
               : "Tjek din indbakke — tilbuddet er på vej til dig."}

@@ -4,6 +4,7 @@ import {
   sendLeadEmailToCompany,
   sendLeadSmsToCompany,
   sendQuoteEmailToCustomer,
+  sendBookingEmailToCustomer,
 } from "@/lib/notify"
 import type { CompanyRow, LeadRow } from "@/types/database"
 
@@ -101,6 +102,8 @@ export async function POST(
       sendLeadSmsToCompany(company, fullLead),
       body.action_type === "email"
         ? sendQuoteEmailToCustomer(company, fullLead)
+        : body.action_type === "book" && body.scheduled_at
+        ? sendBookingEmailToCustomer(company, fullLead, body.scheduled_at)
         : Promise.resolve(),
     ])
     results.forEach((r, i) => {

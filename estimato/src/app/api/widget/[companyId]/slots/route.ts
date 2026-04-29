@@ -58,11 +58,13 @@ export async function GET(
     const [openH] = hours.open.split(":").map(Number)
     const [closeH] = hours.close.split(":").map(Number)
 
-    // Generer tider hver 2. time
+    const y = date.getFullYear()
+    const mo = String(date.getMonth() + 1).padStart(2, "0")
+    const dd = String(date.getDate()).padStart(2, "0")
+
+    // Generer tider hver 2. time — naive datetime (ingen Z) så browseren viser lokal tid
     for (let h = openH; h < closeH; h += 2) {
-      const slot = new Date(date)
-      slot.setHours(h, 0, 0, 0)
-      const iso = slot.toISOString()
+      const iso = `${y}-${mo}-${dd}T${String(h).padStart(2, "0")}:00:00`
       if (!bookedTimes.has(iso)) slots.push(iso)
     }
   }
