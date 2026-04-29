@@ -294,7 +294,7 @@ function Calendar({ availableDates, selectedDate, onSelect }: {
               disabled={isPast || !isAvail}
               onClick={() => { if (!isPast && isAvail) onSelect(dateStr) }}
               style={`
-                aspect-ratio:1/1;border:1.5px solid ${isSel ? c.blue : isToday && !isSel ? c.blue : "transparent"};
+                height:30px;border:1.5px solid ${isSel ? c.blue : isToday && !isSel ? c.blue : "transparent"};
                 border-radius:6px;cursor:${isPast || !isAvail ? "default" : "pointer"};
                 background:${isSel ? c.blue : isAvail && !isPast ? c.blueLight : "transparent"};
                 color:${isSel ? "#fff" : isPast || !isAvail ? c.gray300 : c.gray900};
