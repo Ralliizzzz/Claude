@@ -48,8 +48,9 @@ export async function POST(
       price: body.price,
       price_breakdown: body.price_breakdown as unknown as import("@/types/database").Json,
       action_type: body.action_type,
-      notes: body.notes ?? null,
       status: "new",
+      // notes inkluderes kun hvis kolonnen eksisterer i DB (kræver migration)
+      ...(body.notes ? { notes: body.notes } : {}),
     })
     .select("id")
     .single()
