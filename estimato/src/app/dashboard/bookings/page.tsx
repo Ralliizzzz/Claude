@@ -32,7 +32,7 @@ export default async function BookingsPage({ searchParams }: Props) {
 
   let query = supabase
     .from("bookings")
-    .select("id, scheduled_at, status, created_at, leads(id, name, address, price, phone, email)")
+    .select("id, scheduled_at, status, created_at, lead:leads(id, name, address, price, phone, email)")
     .eq("company_id", user.id)
     .order("scheduled_at", { ascending: true })
 

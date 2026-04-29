@@ -49,6 +49,7 @@ export async function POST(
       price_breakdown: body.price_breakdown as unknown as import("@/types/database").Json,
       action_type: body.action_type,
       status: "new",
+      ...(body.notes ? { notes: body.notes } : {}),
     })
     .select("id")
     .single()
