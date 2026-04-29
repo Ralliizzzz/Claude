@@ -8,18 +8,28 @@ export async function updateLeadStatus(
   status: LeadRow["status"]
 ) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Ikke autoriseret")
 
   const { error } = await supabase
     .from("leads")
     .update({ status })
     .eq("id", leadId)
-    .eq("company_id", user.id) // Sikrer at man kun kan opdatere egne leads
+    .eq("company_id", user.id)
 
   if (error) throw new Error("Kunne ikke opdatere status")
+}
+
+export async function deleteLead(leadId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Ikke autoriseret")
+
+  const { error } = await supabase
+    .from("leads")
+    .delete()
+    .eq("id", leadId)
+    .eq("company_id", user.id)
+
+  if (error) throw new Error("Kunne ikke slette lead")
 }

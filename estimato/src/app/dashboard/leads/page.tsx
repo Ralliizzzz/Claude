@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import type { LeadRow } from "@/types/database"
 import LeadsTable from "./LeadsTable"
 
+export type LeadWithBooking = LeadRow & {
+  bookings?: { scheduled_at: string }[] | null
+}
+
 interface Props {
   searchParams: Promise<{ status?: string }>
 }
@@ -18,7 +22,7 @@ export default async function LeadsPage({ searchParams }: Props) {
 
   let query = supabase
     .from("leads")
-    .select("*")
+    .select("*, bookings(scheduled_at)")
     .eq("company_id", user.id)
     .order("created_at", { ascending: false })
 
@@ -27,7 +31,7 @@ export default async function LeadsPage({ searchParams }: Props) {
   }
 
   const result = await query
-  const leads = (result.data ?? []) as LeadRow[]
+  const leads = (result.data ?? []) as LeadWithBooking[]
 
   // Tæl pr. status
   const countResult = await supabase
@@ -45,7 +49,7 @@ export default async function LeadsPage({ searchParams }: Props) {
     <div>
       <h1 className="text-2xl font-bold mb-1">Leads</h1>
       <p className="text-sm text-gray-500 mb-6">Kunder der har udfyldt din tilbudsberegner.</p>
-      <LeadsTable leads={leads} counts={counts} activeStatus={status ?? "all"} />
+      <LeadsTable leads={leads as LeadWithBooking[]} counts={counts} activeStatus={status ?? "all"} />
     </div>
   )
 }

@@ -180,14 +180,6 @@ function BookingCard({
             </span>
           </div>
 
-          {b.lead.notes && (
-            <div className="mt-2 flex items-start gap-1.5">
-              <svg className="w-3 h-3 text-gray-300 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              <p className="text-xs text-gray-500 leading-relaxed">{b.lead.notes}</p>
-            </div>
-          )}
         </div>
       </div>
 
