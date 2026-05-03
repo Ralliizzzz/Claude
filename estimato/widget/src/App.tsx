@@ -2,7 +2,7 @@ import { h, Fragment } from "preact"
 import type { ComponentChildren } from "preact"
 import { useState, useEffect, useRef } from "preact/hooks"
 import type { QuoteSettings, PropertyType, ActionType, Step, PriceBreakdown, FrequencyKey } from "./types"
-import { fetchSettings, fetchAddressSuggestions, fetchBBRData, fetchAvailableDates, fetchSlotsForDate, submitLead } from "./api"
+import { fetchSettings, fetchAddressSuggestions, fetchBBRData, fetchAvailableDates, fetchSlotsForDate, submitLead, bookLead } from "./api"
 import { calculatePrice } from "./calc"
 
 // ─── Design tokens ─────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ const FREQUENCY_LABELS: Record<FrequencyKey, string> = {
 }
 
 const STEP_NUM: Record<Step, number> = {
-  address: 1, price: 2, action: 3, contact: 4, confirmation: 4,
+  address: 1, price: 2, action: 3, contact: 4, "quote-summary": 4, confirmation: 4,
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────
@@ -367,6 +367,10 @@ export default function App({ companyId }: AppProps) {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  // Quote-summary
+  const [leadId, setLeadId] = useState<string | null>(null)
+  const [bookingConfirmed, setBookingConfirmed] = useState(false)
+
   useEffect(() => {
     fetchSettings(companyId).then(setSettings).catch(() => setLoadError(true))
   }, [companyId])
@@ -487,7 +491,7 @@ export default function App({ companyId }: AppProps) {
     setSubmitting(true)
     setSubmitError(null)
     try {
-      await submitLead(companyId, {
+      const result = await submitLead(companyId, {
         name, email: email || undefined, phone,
         address: addressText,
         sqm: Number(sqm) || undefined,
@@ -498,7 +502,35 @@ export default function App({ companyId }: AppProps) {
         scheduled_at: selectedSlot ?? undefined,
         notes: notes || undefined,
       })
-      setStep("confirmation")
+      if (action === "email") {
+        setLeadId(result.lead_id)
+        setBookingConfirmed(false)
+        setLoadingDates(true)
+        setAvailableDates([])
+        setSelectedDate(null)
+        setSlotsForDate([])
+        setSelectedSlot(null)
+        const dates = await fetchAvailableDates(companyId)
+        setAvailableDates(dates)
+        setLoadingDates(false)
+        setStep("quote-summary")
+      } else {
+        setStep("confirmation")
+      }
+    } catch {
+      setSubmitError("Noget gik galt. Prøv igen.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleBookFromSummary() {
+    if (!leadId || !selectedSlot) return
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      await bookLead(leadId, selectedSlot)
+      setBookingConfirmed(true)
     } catch {
       setSubmitError("Noget gik galt. Prøv igen.")
     } finally {
@@ -919,6 +951,121 @@ export default function App({ companyId }: AppProps) {
               </button>
             )
           })()}
+        </>
+      )}
+
+      {/* ── Step: Quote Summary ──────────────────────────────────── */}
+      {step === "quote-summary" && breakdown && (
+        <>
+          {bookingConfirmed ? (
+            <div style="text-align:center;padding:32px 0 24px;">
+              <div style={`width:72px;height:72px;border-radius:50%;background:${c.greenLight};border:2px solid #bbf7d0;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;`}>
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+              <h2 style={`font-size:1.5rem;font-weight:800;letter-spacing:-0.02em;margin:0 0 10px;color:${c.gray900};`}>
+                Tak! Din forespørgsel er modtaget.
+              </h2>
+              <p style={`font-size:0.9rem;color:${c.gray500};max-width:340px;margin:0 auto;line-height:1.6;`}>
+                Vi har sendt dig et overblik på mail. Du modtager en bekræftelsesmail, så snart vi har godkendt din tid.
+              </p>
+            </div>
+          ) : (
+            <>
+              <h2 style={s.h2}>Dit tilbud</h2>
+              <p style={`${s.subtitle}margin-bottom:20px;`}>
+                Tilbuddet er sendt til <strong>{email}</strong>. Du kan booke en tid direkte herunder eller redigere tilbuddet.
+              </p>
+
+              {/* Tilbudsoversigt */}
+              <div style="margin-bottom:24px;">
+                <PriceSummary breakdown={breakdown} sqm={sqm} />
+              </div>
+
+              {/* Adresse-info */}
+              <div style={`background:${c.gray50};border:1px solid ${c.gray200};border-radius:12px;padding:14px 18px;margin-bottom:24px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;`}>
+                <span style={`font-size:0.82rem;color:${c.gray500};`}>{addressText}</span>
+                <span style={`width:4px;height:4px;border-radius:50%;background:${c.gray300};flex-shrink:0;`} />
+                <span style={`font-size:0.82rem;color:${c.gray500};`}>{PROPERTY_LABELS[propertyType]}</span>
+                <span style={`width:4px;height:4px;border-radius:50%;background:${c.gray300};flex-shrink:0;`} />
+                <span style={`font-size:0.82rem;color:${c.gray500};`}>{sqm} m²</span>
+              </div>
+
+              {/* Kalender-sektion */}
+              <div style="margin-bottom:8px;">
+                <p style={s.sectionLabel}>Book en tid med det samme</p>
+
+                {loadingDates ? (
+                  <div style={`color:${c.gray400};font-size:0.83rem;padding:12px 0;`}>Henter ledige tider…</div>
+                ) : availableDates.length === 0 ? (
+                  <div style={`color:${c.gray500};font-size:0.82rem;padding:12px 14px;background:${c.gray50};border:1px solid ${c.gray200};border-radius:10px;`}>
+                    Ingen ledige tider de næste 30 dage — kontakt os direkte for at aftale en tid.
+                  </div>
+                ) : (
+                  <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
+                    <Calendar
+                      availableDates={availableDates}
+                      selectedDate={selectedDate}
+                      onSelect={onSelectDate}
+                    />
+                    {selectedDate && (
+                      <div style="flex:1;min-width:140px;">
+                        <p style={`${s.sectionLabel}margin-bottom:8px;`}>Vælg tidspunkt</p>
+                        {loadingSlots ? (
+                          <div style={`color:${c.gray400};font-size:0.83rem;`}>Henter tider…</div>
+                        ) : slotsForDate.length === 0 ? (
+                          <div style={`color:${c.gray500};font-size:0.82rem;padding:10px 12px;background:${c.gray50};border:1px solid ${c.gray200};border-radius:10px;`}>
+                            Ingen ledige tider denne dag.
+                          </div>
+                        ) : (
+                          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                            {slotsForDate.map((slot) => {
+                              const d = new Date(slot)
+                              const startH = d.toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })
+                              const endH = new Date(d.getTime() + 7200000).toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" })
+                              const sel = selectedSlot === slot
+                              return (
+                                <button
+                                  key={slot}
+                                  onClick={() => setSelectedSlot(sel ? null : slot)}
+                                  style={`border:1.5px solid ${sel ? c.blue : c.gray200};background:${sel ? c.blueLight : "#fff"};border-radius:8px;padding:7px 10px;font-size:0.8rem;cursor:pointer;font-family:${font};color:${sel ? c.blue : c.gray700};font-weight:${sel ? "700" : "500"};transition:all 0.15s;white-space:nowrap;`}
+                                >
+                                  {startH} – {endH}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {submitError && <p style={`${s.error}margin-top:12px;`}>{submitError}</p>}
+
+              {(() => {
+                const disabled = !selectedSlot || submitting
+                return (
+                  <button
+                    style={`${s.btn}margin-top:20px;` + (disabled ? s.btnDisabled : "")}
+                    disabled={disabled}
+                    onClick={handleBookFromSummary}
+                  >
+                    {submitting ? "Booker…" : "Accepter tilbud & book tid"}
+                  </button>
+                )
+              })()}
+
+              <button
+                style={`width:100%;background:none;border:1px solid ${c.gray200};color:${c.gray500};border-radius:12px;padding:14px 24px;font-size:0.9rem;font-weight:500;cursor:pointer;margin-top:10px;font-family:${font};letter-spacing:0.01em;`}
+                onClick={() => setStep("price")}
+              >
+                Rediger tilbud
+              </button>
+            </>
+          )}
         </>
       )}
 

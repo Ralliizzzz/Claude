@@ -41,6 +41,15 @@ export async function fetchSlotsForDate(companyId: string, date: string): Promis
   return res.json()
 }
 
+export async function bookLead(leadId: string, scheduledAt: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/quote/${leadId}/book`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ scheduled_at: scheduledAt }),
+  })
+  if (!res.ok) throw new Error("Booking fejlede")
+}
+
 export async function submitLead(
   companyId: string,
   payload: {

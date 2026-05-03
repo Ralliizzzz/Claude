@@ -12,6 +12,15 @@ const PROPERTY_LABEL: Record<string, string> = {
   commercial: "Erhverv",
 }
 
+interface PriceBreakdownForEmail {
+  base: number
+  add_ons: { name: string; price: number }[]
+  discount: { name: string; value: number } | null
+  frequency_discount: { name: string; value: number } | null
+  transport_fee: { amount: number; billable_km: number; price_per_km: number } | null
+  total: number
+}
+
 interface LeadData {
   id: string
   name: string
@@ -22,6 +31,7 @@ interface LeadData {
   property_type: string | null
   price: number
   action_type: string
+  price_breakdown?: unknown
 }
 
 interface CompanyData {
@@ -58,7 +68,8 @@ export async function sendLeadEmailToCompany(
 
 export async function sendQuoteEmailToCustomer(
   company: CompanyData,
-  lead: LeadData
+  lead: LeadData,
+  quoteUrl?: string
 ): Promise<void> {
   if (!lead.email) return
 
@@ -74,7 +85,7 @@ export async function sendQuoteEmailToCustomer(
     from: `${company.company_name} <noreply@estimato.dk>`,
     to: lead.email,
     subject: `Dit tilbud fra ${company.company_name} — ${lead.price.toLocaleString("da-DK")} kr`,
-    html: customerQuoteEmail({ company, lead }),
+    html: customerQuoteEmail({ company, lead, quoteUrl }),
   })
 }
 
@@ -295,10 +306,30 @@ function companyLeadEmail({
 function customerQuoteEmail({
   company,
   lead,
+  quoteUrl,
 }: {
   company: CompanyData
   lead: LeadData
+  quoteUrl?: string
 }) {
+  const bd = (lead.price_breakdown ?? null) as PriceBreakdownForEmail | null
+  const savings = Math.abs(
+    ((bd?.discount?.value ?? 0) as number) + ((bd?.frequency_discount?.value ?? 0) as number)
+  )
+
+  const breakdownRows = bd
+    ? `
+      <table width="100%" style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:8px;">
+        ${row(`Grundpris${lead.sqm ? ` (${lead.sqm} m²)` : ""}`, `${bd.base.toLocaleString("da-DK")} kr`)}
+        ${bd.add_ons.map((a) => row(a.name, `+${a.price.toLocaleString("da-DK")} kr`)).join("")}
+        ${bd.transport_fee ? row(`Kørsel (${bd.transport_fee.billable_km} km × ${bd.transport_fee.price_per_km} kr/km)`, `+${bd.transport_fee.amount.toLocaleString("da-DK")} kr`) : ""}
+        ${bd.discount ? rowGreen(bd.discount.name, `${bd.discount.value.toLocaleString("da-DK")} kr`) : ""}
+        ${bd.frequency_discount ? rowGreen(`Hyppighedsrabat (${bd.frequency_discount.name})`, `${bd.frequency_discount.value.toLocaleString("da-DK")} kr`) : ""}
+      </table>
+      ${savings > 0 ? `<p style="margin:0 0 4px;font-size:0.8rem;color:#16a34a;text-align:right;">Du sparer ${savings.toLocaleString("da-DK")} kr</p>` : ""}
+    `
+    : ""
+
   return `<!DOCTYPE html>
 <html lang="da">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -321,17 +352,28 @@ function customerQuoteEmail({
             Her er dit tilbud for rengøring af ${lead.address}
           </p>
 
-          <!-- Pris -->
-          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center;">
-            <p style="margin:0 0 4px;color:#6b7280;font-size:0.85rem;">Tilbudspris</p>
-            <p style="margin:0;font-size:2rem;font-weight:700;color:#111;">${lead.price.toLocaleString("da-DK")} kr</p>
-            ${lead.sqm ? `<p style="margin:8px 0 0;color:#9ca3af;font-size:0.8rem;">${lead.sqm} m² · ${PROPERTY_LABEL[lead.property_type ?? ""] ?? ""}</p>` : ""}
+          <!-- Prisoversigt -->
+          ${breakdownRows}
+
+          <!-- Total -->
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <p style="margin:0 0 2px;color:#6b7280;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">I alt inkl. moms</p>
+              <p style="margin:0;font-size:1.8rem;font-weight:800;color:#2563eb;">${lead.price.toLocaleString("da-DK")} kr</p>
+            </div>
+            ${lead.sqm ? `<p style="margin:0;color:#9ca3af;font-size:0.82rem;">${lead.sqm} m²${lead.property_type ? ` · ${PROPERTY_LABEL[lead.property_type] ?? ""}` : ""}</p>` : ""}
           </div>
 
-          <p style="margin:0 0 24px;color:#374151;font-size:0.9rem;">
-            Tilbuddet gælder rengøring af din bolig på <strong>${lead.address}</strong>.
-            Kontakt os for at booke en tid eller få svar på spørgsmål.
+          <!-- CTA: Accepter eller rediger -->
+          ${quoteUrl ? `
+          <a href="${quoteUrl}"
+             style="display:block;text-align:center;background:#2563eb;color:#fff;text-decoration:none;padding:16px;border-radius:10px;font-weight:700;font-size:0.95rem;margin-bottom:12px;letter-spacing:0.01em;">
+            Accepter eller rediger tilbud →
+          </a>
+          <p style="margin:0 0 20px;color:#9ca3af;font-size:0.78rem;text-align:center;">
+            Klik på knappen for at booke en tid eller justere tilbuddet
           </p>
+          ` : ""}
 
           ${
             company.phone
@@ -572,5 +614,12 @@ function row(label: string, value: string) {
   return `<tr>
     <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;font-size:0.83rem;color:#6b7280;width:40%;white-space:nowrap;">${label}</td>
     <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;font-size:0.83rem;color:#111;">${value}</td>
+  </tr>`
+}
+
+function rowGreen(label: string, value: string) {
+  return `<tr>
+    <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;font-size:0.83rem;color:#16a34a;width:40%;white-space:nowrap;">${label}</td>
+    <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;font-size:0.83rem;color:#16a34a;">${value}</td>
   </tr>`
 }

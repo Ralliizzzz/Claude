@@ -69,4 +69,4 @@ export interface PriceBreakdown {
   total: number
 }
 
-export type Step = "address" | "price" | "action" | "contact" | "confirmation"
+export type Step = "address" | "price" | "action" | "contact" | "quote-summary" | "confirmation"

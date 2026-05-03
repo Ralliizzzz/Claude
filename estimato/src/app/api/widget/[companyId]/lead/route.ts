@@ -97,11 +97,14 @@ export async function POST(
       created_at: new Date().toISOString(),
     }
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://estimato.dk"
+    const quoteUrl = `${appUrl}/quote/${lead.id}`
+
     const results = await Promise.allSettled([
       sendLeadEmailToCompany(company, fullLead),
       sendLeadSmsToCompany(company, fullLead),
       body.action_type === "email"
-        ? sendQuoteEmailToCustomer(company, fullLead)
+        ? sendQuoteEmailToCustomer(company, { ...fullLead, price_breakdown: body.price_breakdown }, quoteUrl)
         : body.action_type === "book" && body.scheduled_at
         ? sendBookingEmailToCustomer(company, fullLead, body.scheduled_at)
         : Promise.resolve(),
