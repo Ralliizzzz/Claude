@@ -1,6 +1,44 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { LeadRow } from "@/types/database";
+import { DashboardCharts } from "./DashboardCharts";
+
+type LeadForCharts = Pick<LeadRow, "created_at" | "status">;
+
+function computeWeeklyData(leads: LeadForCharts[]) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  // Monday of current week
+  const dow = now.getDay();
+  const currentMonday = new Date(now);
+  currentMonday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+
+  // 8 buckets going back 7 weeks
+  const keys: number[] = [];
+  const labels: Record<number, string> = {};
+  for (let i = 7; i >= 0; i--) {
+    const monday = new Date(currentMonday.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+    const key = monday.getTime();
+    keys.push(key);
+    labels[key] = `${monday.getDate()}/${monday.getMonth() + 1}`;
+  }
+
+  const counts: Record<number, number> = Object.fromEntries(keys.map((k) => [k, 0]));
+
+  for (const lead of leads) {
+    const d = new Date(lead.created_at);
+    d.setHours(0, 0, 0, 0);
+    const ldow = d.getDay();
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - (ldow === 0 ? 6 : ldow - 1));
+    monday.setHours(0, 0, 0, 0);
+    const key = monday.getTime();
+    if (key in counts) counts[key]++;
+  }
+
+  return keys.map((k) => ({ week: labels[k], antal: counts[k] }));
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -8,7 +46,7 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [leadsCountResult, bookingsCountResult, newLeadsCountResult, recentLeadsResult] =
+  const [leadsCountResult, bookingsCountResult, newLeadsCountResult, recentLeadsResult, chartsLeadsResult] =
     await Promise.all([
       supabase
         .from("leads")
@@ -29,6 +67,11 @@ export default async function DashboardPage() {
         .eq("company_id", user!.id)
         .order("created_at", { ascending: false })
         .limit(5),
+      supabase
+        .from("leads")
+        .select("created_at, status")
+        .eq("company_id", user!.id)
+        .order("created_at", { ascending: true }),
     ]);
 
   const leadsCount = leadsCountResult.count ?? 0;
@@ -39,6 +82,14 @@ export default async function DashboardPage() {
     "id" | "name" | "address" | "price" | "status" | "action_type" | "created_at"
   >[] | null;
   const hasLeads = leadsCount > 0;
+
+  const chartsLeads = (chartsLeadsResult.data ?? []) as LeadForCharts[];
+  const weeklyData = computeWeeklyData(chartsLeads);
+  const statusData = [
+    { name: "Ny", value: chartsLeads.filter((l) => l.status === "new").length, color: "#3B82F6" },
+    { name: "Kontaktet", value: chartsLeads.filter((l) => l.status === "contacted").length, color: "#F59E0B" },
+    { name: "Booket", value: chartsLeads.filter((l) => l.status === "booked").length, color: "#10B981" },
+  ];
 
   return (
     <div>
@@ -111,38 +162,42 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Recent leads */}
+      {/* Charts + recent leads */}
       {hasLeads && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-gray-900">Seneste leads</h2>
-            <Link
-              href="/dashboard/leads"
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Se alle →
-            </Link>
-          </div>
-          <div className="flex flex-col gap-2">
-            {recentLeads?.map((lead) => (
-              <div
-                key={lead.id}
-                className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-3.5 hover:border-gray-200 transition-colors"
+        <>
+          <DashboardCharts weeklyData={weeklyData} statusData={statusData} />
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-gray-900">Seneste leads</h2>
+              <Link
+                href="/dashboard/leads"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">{lead.name}</p>
-                  <p className="text-gray-400 text-xs mt-0.5">{lead.address}</p>
+                Se alle →
+              </Link>
+            </div>
+            <div className="flex flex-col gap-2">
+              {recentLeads?.map((lead) => (
+                <div
+                  key={lead.id}
+                  className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-3.5 hover:border-gray-200 transition-colors"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">{lead.name}</p>
+                    <p className="text-gray-400 text-xs mt-0.5">{lead.address}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {lead.price.toLocaleString("da-DK")} kr
+                    </p>
+                    <StatusBadge status={lead.status} />
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <p className="font-semibold text-gray-900 text-sm">
-                    {lead.price.toLocaleString("da-DK")} kr
-                  </p>
-                  <StatusBadge status={lead.status} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
