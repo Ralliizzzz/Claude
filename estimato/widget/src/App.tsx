@@ -512,6 +512,8 @@ export default function App({ companyId }: AppProps) {
         action_type: action,
         scheduled_at: selectedSlot ?? undefined,
         notes: notes || undefined,
+        lat: customerLat,
+        lon: customerLon,
       })
       if (action === "email") {
         setLeadId(result.lead_id)

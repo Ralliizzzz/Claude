@@ -43,6 +43,12 @@ export interface QuoteSettingsRow {
   updated_at: string
 }
 
+export interface LeadLogistics {
+  nearest_branch: string
+  distance_km: number
+  drive_minutes: number
+}
+
 export interface LeadRow {
   id: string
   company_id: string
@@ -57,6 +63,7 @@ export interface LeadRow {
   action_type: LeadAction
   notes: string | null
   status: LeadStatus
+  logistics: LeadLogistics | null
   created_at: string
 }
 

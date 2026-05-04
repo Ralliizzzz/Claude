@@ -68,6 +68,8 @@ export async function submitLead(
     action_type: "book" | "callback" | "email"
     scheduled_at?: string
     notes?: string
+    lat?: number | null
+    lon?: number | null
   }
 ): Promise<{ success: boolean; lead_id: string }> {
   const res = await fetch(`${BASE}/api/widget/${companyId}/lead`, {

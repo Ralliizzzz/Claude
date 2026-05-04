@@ -181,6 +181,39 @@ export default function LeadsTable({ leads, counts, activeStatus }: Props) {
                       </Detail>
                     </div>
 
+                    {/* Logistik */}
+                    {"logistics" in lead && lead.logistics && (() => {
+                      const l = lead.logistics as { nearest_branch: string; distance_km: number; drive_minutes: number }
+                      const h = Math.floor(l.drive_minutes / 60)
+                      const m = l.drive_minutes % 60
+                      const driveLabel = h > 0 ? `${h} t ${m > 0 ? `${m} min` : ""}`.trim() : `${m} min`
+                      return (
+                        <div className="mb-4 bg-white border border-gray-100 rounded-lg p-3">
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Logistik</p>
+                          <div className="flex flex-wrap gap-4">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                              <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                              </svg>
+                              <span className="font-medium text-gray-700">{l.nearest_branch}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                              <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                              </svg>
+                              <span>{l.distance_km} km</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                              <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                              </svg>
+                              <span>{driveLabel} kørsel</span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
                     {/* Prisspecifikation */}
                     {breakdown && (
                       <div className="mb-4 bg-white border border-gray-100 rounded-lg p-3">

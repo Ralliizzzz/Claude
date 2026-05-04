@@ -9,6 +9,8 @@ import {
 import { getDurationMinutes } from "@/lib/duration"
 import type { DurationRange } from "@/lib/duration"
 import type { CompanyRow, LeadRow } from "@/types/database"
+import { computeLogistics } from "@/lib/maps"
+import type { Location } from "@/types/settings"
 
 interface LeadPayload {
   name: string
@@ -22,6 +24,8 @@ interface LeadPayload {
   action_type: "book" | "callback" | "email"
   scheduled_at?: string
   notes?: string
+  lat?: number | null
+  lon?: number | null
 }
 
 export async function POST(
@@ -36,6 +40,25 @@ export async function POST(
   }
 
   const supabase = await createServiceClient()
+
+  // Hent indstillinger (lokationer + rengøringstid) parallelt med lead-oprettelse
+  const [settingsResult] = await Promise.all([
+    supabase
+      .from("quote_settings")
+      .select("duration_ranges, main_location, branch_locations")
+      .eq("company_id", companyId)
+      .single(),
+  ])
+
+  // Beregn logistik hvis koordinater er tilgængelige
+  let logistics: { nearest_branch: string; distance_km: number; drive_minutes: number } | null = null
+  if (body.lat != null && body.lon != null && settingsResult.data) {
+    const mainLocation = settingsResult.data.main_location as unknown as Location
+    const branchLocations = (settingsResult.data.branch_locations ?? []) as unknown as Location[]
+    if (mainLocation?.lat != null && mainLocation?.lon != null) {
+      logistics = await computeLogistics(body.lat, body.lon, mainLocation, branchLocations)
+    }
+  }
 
   // Opret lead
   const { data: lead, error: leadError } = await supabase
@@ -53,6 +76,7 @@ export async function POST(
       action_type: body.action_type,
       status: "new",
       ...(body.notes ? { notes: body.notes } : {}),
+      ...(logistics ? { logistics } : {}),
     })
     .select("id")
     .single()
@@ -72,11 +96,12 @@ export async function POST(
     })
   }
 
-  // Send notifikationer asynkront — blokerer ikke svaret til widget'en
-  const [companyResult, settingsResult] = await Promise.all([
-    supabase.from("companies").select("company_name, email, phone").eq("id", companyId).single(),
-    supabase.from("quote_settings").select("duration_ranges").eq("company_id", companyId).single(),
-  ])
+  // Send notifikationer
+  const companyResult = await supabase
+    .from("companies")
+    .select("company_name, email, phone")
+    .eq("id", companyId)
+    .single()
 
   const company = companyResult.data as Pick<CompanyRow, "company_name" | "email" | "phone"> | null
   const durationRanges = ((settingsResult.data?.duration_ranges ?? []) as DurationRange[])
@@ -97,6 +122,7 @@ export async function POST(
       action_type: body.action_type,
       notes: body.notes ?? null,
       status: "new",
+      logistics: null,
       created_at: new Date().toISOString(),
     }
 
