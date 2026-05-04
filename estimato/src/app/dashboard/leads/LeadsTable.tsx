@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import type { LeadRow } from "@/types/database"
 import type { LeadWithBooking } from "./page"
 import { updateLeadStatus, deleteLead, bookLeadForCustomer } from "./actions"
+import { BookingPicker } from "./BookingPicker"
 
 const STATUS_LABEL: Record<string, string> = {
   new: "Ny", contacted: "Kontaktet", booked: "Booket",
@@ -31,13 +32,13 @@ interface Props {
   leads: LeadWithBooking[]
   counts: { all: number; new: number; contacted: number; booked: number }
   activeStatus: string
+  companyId: string
 }
 
-export default function LeadsTable({ leads, counts, activeStatus }: Props) {
+export default function LeadsTable({ leads, counts, activeStatus, companyId }: Props) {
   const router = useRouter()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [bookingLeadId, setBookingLeadId] = useState<string | null>(null)
-  const [bookingDateTime, setBookingDateTime] = useState("")
   const [isPending, startTransition] = useTransition()
 
   const tabs = [
@@ -58,12 +59,10 @@ export default function LeadsTable({ leads, counts, activeStatus }: Props) {
     })
   }
 
-  function handleBookForCustomer(leadId: string) {
-    if (!bookingDateTime) return
+  function handleBookForCustomer(leadId: string, scheduledAt: string) {
     startTransition(async () => {
-      await bookLeadForCustomer(leadId, new Date(bookingDateTime).toISOString())
+      await bookLeadForCustomer(leadId, scheduledAt)
       setBookingLeadId(null)
-      setBookingDateTime("")
       router.refresh()
     })
   }
@@ -268,36 +267,19 @@ export default function LeadsTable({ leads, counts, activeStatus }: Props) {
                       <div className="mb-4">
                         {bookingLeadId !== lead.id ? (
                           <button
-                            onClick={(e) => { e.stopPropagation(); setBookingLeadId(lead.id); setBookingDateTime("") }}
+                            onClick={(e) => { e.stopPropagation(); setBookingLeadId(lead.id) }}
                             className="text-xs px-3 py-1.5 rounded-lg font-medium border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors"
                           >
                             + Book tid for kunde
                           </button>
                         ) : (
-                          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3" onClick={(e) => e.stopPropagation()}>
-                            <p className="text-xs font-semibold text-blue-700 mb-2">Vælg dato og tidspunkt</p>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <input
-                                type="datetime-local"
-                                value={bookingDateTime}
-                                onChange={(e) => setBookingDateTime(e.target.value)}
-                                className="text-xs border border-blue-200 rounded-lg px-3 py-1.5 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              />
-                              <button
-                                disabled={!bookingDateTime || isPending}
-                                onClick={(e) => { e.stopPropagation(); handleBookForCustomer(lead.id) }}
-                                className="text-xs px-3 py-1.5 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                              >
-                                Bekræft booking
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setBookingLeadId(null) }}
-                                className="text-xs px-3 py-1.5 rounded-lg font-medium border border-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
-                              >
-                                Annuller
-                              </button>
-                            </div>
-                          </div>
+                          <BookingPicker
+                            companyId={companyId}
+                            sqm={lead.sqm ?? undefined}
+                            onConfirm={(scheduledAt) => handleBookForCustomer(lead.id, scheduledAt)}
+                            onCancel={() => setBookingLeadId(null)}
+                            isPending={isPending}
+                          />
                         )}
                       </div>
                     )}

@@ -49,7 +49,7 @@ export default async function LeadsPage({ searchParams }: Props) {
     <div>
       <h1 className="text-2xl font-bold mb-1">Leads</h1>
       <p className="text-sm text-gray-500 mb-6">Kunder der har udfyldt din tilbudsberegner.</p>
-      <LeadsTable leads={leads as LeadWithBooking[]} counts={counts} activeStatus={status ?? "all"} />
+      <LeadsTable leads={leads as LeadWithBooking[]} counts={counts} activeStatus={status ?? "all"} companyId={user.id} />
     </div>
   )
 }
