@@ -34,31 +34,23 @@ export async function computeLogistics(
   }))
   const nearest = withDistance.reduce((a, b) => (a.km < b.km ? a : b))
 
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY
-  if (apiKey) {
-    try {
-      const url = new URL("https://maps.googleapis.com/maps/api/distancematrix/json")
-      url.searchParams.set("origins", `${nearest.loc.lat},${nearest.loc.lon}`)
-      url.searchParams.set("destinations", `${customerLat},${customerLon}`)
-      url.searchParams.set("mode", "driving")
-      url.searchParams.set("language", "da")
-      url.searchParams.set("key", apiKey)
-
-      const res = await fetch(url.toString(), { next: { revalidate: 0 } })
-      if (res.ok) {
-        const data = await res.json()
-        const element = data.rows?.[0]?.elements?.[0]
-        if (element?.status === "OK") {
-          return {
-            nearest_branch: nearest.loc.name,
-            distance_km: Math.round((element.distance.value / 1000) * 10) / 10,
-            drive_minutes: Math.ceil(element.duration.value / 60),
-          }
+  // OSRM — gratis, ingen API-nøgle, OpenStreetMap-data
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${nearest.loc.lon},${nearest.loc.lat};${customerLon},${customerLat}?overview=false`
+    const res = await fetch(url, { next: { revalidate: 0 } })
+    if (res.ok) {
+      const data = await res.json()
+      const route = data.routes?.[0]
+      if (route) {
+        return {
+          nearest_branch: nearest.loc.name,
+          distance_km: Math.round((route.distance / 1000) * 10) / 10,
+          drive_minutes: Math.ceil(route.duration / 60),
         }
       }
-    } catch {
-      // Falder igennem til estimat
     }
+  } catch {
+    // Falder igennem til estimat
   }
 
   // Fallback: luftlinje-afstand, estimeret køretid ved 50 km/t
