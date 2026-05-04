@@ -1,91 +1,233 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { LeadRow } from "@/types/database";
+import { PeriodSelector } from "./PeriodSelector";
+import { DashboardCharts, type TimelinePoint, type FunnelItem } from "./DashboardCharts";
 
-export default async function DashboardPage() {
+type LeadForCharts = { created_at: string; status: string; price: number };
+
+function getDateRange(period: string, customFrom?: string, customTo?: string) {
+  const endDate = new Date();
+  endDate.setHours(23, 59, 59, 999);
+
+  if (customFrom && customTo) {
+    return {
+      startDate: new Date(customFrom + "T00:00:00"),
+      endDate: new Date(customTo + "T23:59:59"),
+    };
+  }
+
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
+
+  switch (period) {
+    case "7d":   startDate.setDate(startDate.getDate() - 6); break;
+    case "30d":  startDate.setDate(startDate.getDate() - 29); break;
+    case "90d":  startDate.setDate(startDate.getDate() - 89); break;
+    case "180d": startDate.setDate(startDate.getDate() - 179); break;
+    case "365d": startDate.setDate(startDate.getDate() - 364); break;
+    case "all":  startDate.setFullYear(2000); break;
+    default:     startDate.setDate(startDate.getDate() - 29); break;
+  }
+
+  return { startDate, endDate };
+}
+
+function groupByDay(leads: LeadForCharts[], start: Date, end: Date): TimelinePoint[] {
+  const result: TimelinePoint[] = [];
+  const cur = new Date(start);
+  cur.setHours(0, 0, 0, 0);
+
+  while (cur <= end) {
+    const dayStr = cur.toISOString().slice(0, 10);
+    const antal = leads.filter((l) => l.created_at.slice(0, 10) === dayStr).length;
+    result.push({ label: `${cur.getDate()}/${cur.getMonth() + 1}`, antal });
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  return result;
+}
+
+function groupByWeek(leads: LeadForCharts[], start: Date, end: Date): TimelinePoint[] {
+  const result: TimelinePoint[] = [];
+  const cur = new Date(start);
+  cur.setHours(0, 0, 0, 0);
+  const dow = cur.getDay();
+  cur.setDate(cur.getDate() - (dow === 0 ? 6 : dow - 1));
+
+  while (cur <= end) {
+    const weekEnd = new Date(cur.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+    const antal = leads.filter((l) => {
+      const d = new Date(l.created_at);
+      return d >= cur && d <= weekEnd;
+    }).length;
+    result.push({ label: `${cur.getDate()}/${cur.getMonth() + 1}`, antal });
+    cur.setDate(cur.getDate() + 7);
+  }
+
+  return result;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
+
+function groupByMonth(leads: LeadForCharts[], start: Date, end: Date): TimelinePoint[] {
+  const result: TimelinePoint[] = [];
+  const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+
+  while (cur <= end) {
+    const monthEnd = new Date(cur.getFullYear(), cur.getMonth() + 1, 0, 23, 59, 59);
+    const antal = leads.filter((l) => {
+      const d = new Date(l.created_at);
+      return d >= cur && d <= monthEnd;
+    }).length;
+    result.push({ label: MONTHS[cur.getMonth()], antal });
+    cur.setMonth(cur.getMonth() + 1);
+  }
+
+  return result;
+}
+
+function computeTimelineData(leads: LeadForCharts[], start: Date, end: Date): TimelinePoint[] {
+  if (leads.length === 0) return [];
+  const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 31) return groupByDay(leads, start, end);
+  if (diffDays <= 200) return groupByWeek(leads, start, end);
+  return groupByMonth(leads, start, end);
+}
+
+function formatTimeSaved(minutes: number): string {
+  if (minutes === 0) return "0 min";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} timer`;
+  return `${h} t ${m} min`;
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string; from?: string; to?: string }>;
+}) {
+  const params = await searchParams;
+  const period = params.period ?? "30d";
+  const customFrom = params.from;
+  const customTo = params.to;
+
+  const { startDate, endDate } = getDateRange(period, customFrom, customTo);
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [leadsCountResult, bookingsCountResult, newLeadsCountResult, recentLeadsResult] =
-    await Promise.all([
-      supabase
-        .from("leads")
-        .select("*", { count: "exact", head: true })
-        .eq("company_id", user!.id),
-      supabase
-        .from("bookings")
-        .select("*", { count: "exact", head: true })
-        .eq("company_id", user!.id),
-      supabase
-        .from("leads")
-        .select("*", { count: "exact", head: true })
-        .eq("company_id", user!.id)
-        .eq("status", "new"),
-      supabase
-        .from("leads")
-        .select("id, name, address, price, status, action_type, created_at")
-        .eq("company_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(5),
-    ]);
+  const [totalCountResult, periodLeadsResult, recentLeadsResult] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("*", { count: "exact", head: true })
+      .eq("company_id", user!.id),
+    supabase
+      .from("leads")
+      .select("created_at, status, price")
+      .eq("company_id", user!.id)
+      .gte("created_at", startDate.toISOString())
+      .lte("created_at", endDate.toISOString())
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("leads")
+      .select("id, name, address, price, status, action_type, created_at")
+      .eq("company_id", user!.id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
 
-  const leadsCount = leadsCountResult.count ?? 0;
-  const bookingsCount = bookingsCountResult.count ?? 0;
-  const newLeadsCount = newLeadsCountResult.count ?? 0;
+  const hasLeads = (totalCountResult.count ?? 0) > 0;
+  const periodLeads = (periodLeadsResult.data ?? []) as LeadForCharts[];
   const recentLeads = recentLeadsResult.data as Pick<
     LeadRow,
     "id" | "name" | "address" | "price" | "status" | "action_type" | "created_at"
   >[] | null;
-  const hasLeads = leadsCount > 0;
+
+  // KPIs
+  const leadsInPeriod = periodLeads.length;
+  const bookedCount = periodLeads.filter((l) => l.status === "booked").length;
+  const conversionRate = leadsInPeriod > 0 ? Math.round((bookedCount / leadsInPeriod) * 100) : 0;
+  const minutesSaved = leadsInPeriod * 20;
+  const totalQuoteValue = periodLeads.reduce((sum, l) => sum + (l.price ?? 0), 0);
+
+  // Charts
+  const chartStart =
+    period === "all" && periodLeads.length > 0
+      ? new Date(periodLeads[0].created_at)
+      : startDate;
+
+  const timelineData = computeTimelineData(periodLeads, chartStart, endDate);
+
+  const atLeastContacted = periodLeads.filter(
+    (l) => l.status === "contacted" || l.status === "booked"
+  ).length;
+
+  const funnelData: FunnelItem[] = [
+    { label: "Modtaget", count: leadsInPeriod, pct: 100, color: "#3B82F6" },
+    {
+      label: "Kontaktet",
+      count: atLeastContacted,
+      pct: leadsInPeriod > 0 ? Math.round((atLeastContacted / leadsInPeriod) * 100) : 0,
+      color: "#F59E0B",
+    },
+    {
+      label: "Booket",
+      count: bookedCount,
+      pct: leadsInPeriod > 0 ? Math.round((bookedCount / leadsInPeriod) * 100) : 0,
+      color: "#10B981",
+    },
+  ];
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Oversigt</h1>
-        <p className="text-gray-500 text-sm mt-1">Her er et overblik over din aktivitet.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Oversigt</h1>
+          <p className="text-gray-500 text-sm mt-1">Her er et overblik over din aktivitet.</p>
+        </div>
+        {hasLeads && (
+          <PeriodSelector
+            activePeriod={period}
+            activeFrom={customFrom}
+            activeTo={customTo}
+          />
+        )}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <StatCard
-          label="Leads i alt"
-          value={leadsCount}
-          color="text-blue-600 bg-blue-50"
-          icon={
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Bookinger"
-          value={bookingsCount}
-          color="text-emerald-600 bg-emerald-50"
-          icon={
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Nye leads"
-          value={newLeadsCount}
-          color="text-amber-600 bg-amber-50"
-          highlight={newLeadsCount > 0}
-          icon={
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-          }
-        />
-      </div>
+      {/* KPI cards */}
+      {hasLeads && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <KpiCard
+            label="Leads"
+            value={leadsInPeriod.toString()}
+            sub="i perioden"
+            type="leads"
+          />
+          <KpiCard
+            label="Konvertering"
+            value={`${conversionRate}%`}
+            sub={`${bookedCount} booket`}
+            type="conversion"
+          />
+          <KpiCard
+            label="Tidssparet"
+            value={formatTimeSaved(minutesSaved)}
+            sub="ved 20 min/lead"
+            type="time"
+          />
+          <KpiCard
+            label="Tilbudsværdi"
+            value={`${totalQuoteValue.toLocaleString("da-DK")} kr`}
+            sub="samlet i perioden"
+            type="value"
+          />
+        </div>
+      )}
 
       {/* Empty state */}
       {!hasLeads && (
@@ -111,69 +253,98 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Recent leads */}
+      {/* Charts + recent leads */}
       {hasLeads && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-gray-900">Seneste leads</h2>
-            <Link
-              href="/dashboard/leads"
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Se alle →
-            </Link>
-          </div>
-          <div className="flex flex-col gap-2">
-            {recentLeads?.map((lead) => (
-              <div
-                key={lead.id}
-                className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-3.5 hover:border-gray-200 transition-colors"
+        <>
+          <DashboardCharts timelineData={timelineData} funnelData={funnelData} />
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-gray-900">Seneste leads</h2>
+              <Link
+                href="/dashboard/leads"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">{lead.name}</p>
-                  <p className="text-gray-400 text-xs mt-0.5">{lead.address}</p>
+                Se alle →
+              </Link>
+            </div>
+            <div className="flex flex-col gap-2">
+              {recentLeads?.map((lead) => (
+                <div
+                  key={lead.id}
+                  className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-3.5 hover:border-gray-200 transition-colors"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">{lead.name}</p>
+                    <p className="text-gray-400 text-xs mt-0.5">{lead.address}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {lead.price.toLocaleString("da-DK")} kr
+                    </p>
+                    <StatusBadge status={lead.status} />
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <p className="font-semibold text-gray-900 text-sm">
-                    {lead.price.toLocaleString("da-DK")} kr
-                  </p>
-                  <StatusBadge status={lead.status} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
 }
 
-function StatCard({
+function KpiCard({
   label,
   value,
-  icon,
-  color,
-  highlight = false,
+  sub,
+  type,
 }: {
   label: string;
-  value: number;
-  icon: React.ReactNode;
-  color: string;
-  highlight?: boolean;
+  value: string;
+  sub: string;
+  type: "leads" | "conversion" | "time" | "value";
 }) {
+  const colorMap = {
+    leads: "text-blue-600 bg-blue-50",
+    conversion: "text-emerald-600 bg-emerald-50",
+    time: "text-purple-600 bg-purple-50",
+    value: "text-amber-600 bg-amber-50",
+  };
+
   return (
-    <div
-      className={`bg-white border rounded-xl px-5 py-4 flex items-center gap-4 ${
-        highlight ? "border-amber-200 bg-amber-50/30" : "border-gray-100"
-      }`}
-    >
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
-        {icon}
+    <div className="bg-white border border-gray-100 rounded-xl px-4 py-4">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-3 ${colorMap[type]}`}>
+        {type === "leads" && (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        )}
+        {type === "conversion" && (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+            <polyline points="16 7 22 7 22 13" />
+          </svg>
+        )}
+        {type === "time" && (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+        )}
+        {type === "value" && (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+        )}
       </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-      </div>
+      <p className="text-xl font-bold text-gray-900 leading-tight">{value}</p>
+      <p className="text-sm text-gray-700 mt-0.5">{label}</p>
+      <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
     </div>
   );
 }
