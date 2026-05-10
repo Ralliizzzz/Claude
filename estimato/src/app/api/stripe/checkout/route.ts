@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { stripe } from "@/lib/stripe"
+import { getStripe } from "@/lib/stripe"
 
 const APP_URL = "https://estimato-xi.vercel.app"
 
@@ -17,7 +17,7 @@ export async function POST() {
     .eq("id", user.id)
     .single()
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     mode: "subscription",
     ...(company?.stripe_customer_id
       ? { customer: company.stripe_customer_id }
