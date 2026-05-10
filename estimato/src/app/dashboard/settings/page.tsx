@@ -1,9 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import type { CompanyRow, QuoteSettingsRow } from "@/types/database"
+import type { QuoteSettingsRow } from "@/types/database"
 import type { OpeningHours, Location, DurationRange } from "@/types/settings"
 import SettingsForm from "./SettingsForm"
-import BillingSection from "./BillingSection"
 
 const EMPTY_LOCATION: Location = {
   name: "",
@@ -31,7 +30,7 @@ export default async function SettingsPage() {
       .single(),
     supabase
       .from("companies")
-      .select("company_name, email, phone, subscription_status, trial_end_date, stripe_customer_id")
+      .select("company_name, email, phone")
       .eq("id", user.id)
       .single(),
     supabase
@@ -42,7 +41,7 @@ export default async function SettingsPage() {
   ])
 
   const row = result.data as Pick<QuoteSettingsRow, "opening_hours" | "main_location" | "branch_locations"> | null
-  const company = companyResult.data as Pick<CompanyRow, "company_name" | "email" | "phone" | "subscription_status" | "trial_end_date" | "stripe_customer_id"> | null
+  const company = companyResult.data
 
   const openingHours = (row?.opening_hours ?? {
     mon: { open: "08:00", close: "16:00" },
@@ -78,13 +77,6 @@ export default async function SettingsPage() {
         initialEmail={company?.email ?? ""}
         initialPhone={company?.phone ?? ""}
       />
-      {company && (
-        <BillingSection
-          subscriptionStatus={company.subscription_status}
-          trialEndDate={company.trial_end_date}
-          stripeCustomerId={company.stripe_customer_id}
-        />
-      )}
     </div>
   )
 }

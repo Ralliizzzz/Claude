@@ -60,6 +60,15 @@ function CodeIcon({ active }: IconProps) {
   );
 }
 
+function CreditCardIcon({ active }: IconProps) {
+  return (
+    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="22" height="16" rx="2" />
+      <line x1="1" y1="10" x2="23" y2="10" />
+    </svg>
+  );
+}
+
 const navItems = [
   { href: "/dashboard", label: "Oversigt", Icon: HomeIcon, exact: true },
   { href: "/dashboard/leads", label: "Leads", Icon: UsersIcon, exact: false },
@@ -67,6 +76,7 @@ const navItems = [
   { href: "/dashboard/priser", label: "Priser og tillæg", Icon: TagIcon, exact: false },
   { href: "/dashboard/settings", label: "Indstillinger", Icon: SettingsIcon, exact: false },
   { href: "/dashboard/embed", label: "Installer widget", Icon: CodeIcon, exact: false },
+  { href: "/dashboard/billing", label: "Abonnement", Icon: CreditCardIcon, exact: false },
 ];
 
 export function SidebarNav() {
