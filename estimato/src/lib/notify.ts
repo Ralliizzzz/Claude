@@ -191,51 +191,51 @@ export async function sendLeadSmsToCompany(
   company: CompanyData,
   lead: LeadData
 ): Promise<void> {
-  const token = process.env.GATEWAYAPI_TOKEN
-  if (!token) {
-    console.warn("[notify] GATEWAYAPI_TOKEN ikke sat — SMS ikke sendt")
+  const accountSid = process.env.TWILIO_ACCOUNT_SID
+  const authToken = process.env.TWILIO_AUTH_TOKEN
+  if (!accountSid || !authToken) {
+    console.warn("[notify] Twilio credentials ikke sat — SMS ikke sendt")
     return
   }
   if (!company.phone) return
 
-  const msisdn = normalizePhone(company.phone)
-  if (!msisdn) {
+  const to = normalizePhone(company.phone)
+  if (!to) {
     console.warn("[notify] Ugyldigt telefonnummer:", company.phone)
     return
   }
 
   const message = `Nyt lead fra ${lead.name} (${lead.price.toLocaleString("da-DK")} kr) – ${ACTION_LABEL[lead.action_type] ?? lead.action_type}. Tjek dit dashboard.`
 
-  const res = await fetch("https://gatewayapi.eu/rest/mtsms", {
-    method: "POST",
-    headers: {
-      Authorization: `Token ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      sender: "Estimato",
-      message,
-      recipients: [{ msisdn }],
-    }),
-  })
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        From: "Estimato",
+        To: to,
+        Body: message,
+      }).toString(),
+    }
+  )
 
   if (!res.ok) {
     const body = await res.text()
-    console.error("[notify] GatewayAPI fejl:", res.status, body)
+    console.error("[notify] Twilio fejl:", res.status, body)
   }
 }
 
 // ─── Hjælpefunktioner ────────────────────────────────────────────────────────
 
-function normalizePhone(phone: string): number | null {
-  // Fjern alt undtagen cifre
+function normalizePhone(phone: string): string | null {
   const digits = phone.replace(/\D/g, "")
-  // Dansk nummer uden landekode: 8 cifre → tilføj 45
-  if (digits.length === 8) return Number("45" + digits)
-  // Med landekode (45XXXXXXXX)
-  if (digits.length === 10 && digits.startsWith("45")) return Number(digits)
-  // Med + prefix allerede fjernet (e.g. 4512345678)
-  if (digits.length >= 10) return Number(digits)
+  if (digits.length === 8) return `+45${digits}`
+  if (digits.length === 10 && digits.startsWith("45")) return `+${digits}`
+  if (digits.length >= 10) return `+${digits}`
   return null
 }
 
