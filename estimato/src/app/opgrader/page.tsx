@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import type { CompanyRow } from "@/types/database"
 import UpgradeButton from "./UpgradeButton"
+import LogoutButton from "./LogoutButton"
 
 const features = [
   "Automatisk BBR-opslag og prisberegning",
@@ -92,6 +93,10 @@ export default async function OpgraderPage() {
             estimato@estimato.dk
           </a>
         </p>
+
+        <div className="mt-4 flex justify-center">
+          <LogoutButton />
+        </div>
       </div>
     </div>
   )
