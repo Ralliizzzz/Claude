@@ -17,6 +17,7 @@ export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -158,6 +159,22 @@ export default function SignupPage() {
               />
             </div>
 
+            <div className="flex items-start gap-3">
+              <input
+                id="terms"
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer accent-blue-600"
+              />
+              <label htmlFor="terms" className="text-sm text-gray-500 leading-relaxed cursor-pointer">
+                Jeg accepterer Estimatos{" "}
+                <Link href="/terms" target="_blank" className="text-blue-600 hover:underline">vilkår for brug</Link>
+                {" "}og{" "}
+                <Link href="/privacy" target="_blank" className="text-blue-600 hover:underline">privatlivspolitik</Link>
+              </label>
+            </div>
+
             {error && (
               <div className="bg-red-50 border border-red-100 rounded-lg px-3.5 py-2.5">
                 <p className="text-sm text-red-600">{error}</p>
@@ -166,7 +183,7 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !termsAccepted}
               className="bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60 shadow-sm mt-1"
             >
               {loading ? "Opretter konto..." : "Opret gratis konto"}

@@ -2,7 +2,7 @@ import { h, Fragment } from "preact"
 import type { ComponentChildren } from "preact"
 import { useState, useEffect, useRef } from "preact/hooks"
 import type { QuoteSettings, PropertyType, ActionType, Step, PriceBreakdown, FrequencyKey, DurationRange } from "./types"
-import { fetchSettings, fetchAddressSuggestions, fetchBBRData, fetchAvailableDates, fetchSlotsForDate, submitLead, bookLead } from "./api"
+import { fetchSettings, fetchAddressSuggestions, fetchBBRData, fetchAvailableDates, fetchSlotsForDate, submitLead, bookLead, getApiBase } from "./api"
 import { calculatePrice } from "./calc"
 
 // ─── Design tokens ─────────────────────────────────────────────────────────
@@ -375,6 +375,7 @@ export default function App({ companyId }: AppProps) {
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
   const [notes, setNotes] = useState("")
+  const [consentChecked, setConsentChecked] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -471,6 +472,7 @@ export default function App({ companyId }: AppProps) {
 
   async function goToContact(chosenAction: ActionType) {
     setAction(chosenAction)
+    setConsentChecked(false)
     if (chosenAction === "book") {
       setLoadingDates(true)
       setAvailableDates([])
@@ -955,8 +957,21 @@ export default function App({ companyId }: AppProps) {
 
           {submitError && <p style={`${s.error}margin-top:16px;`}>{submitError}</p>}
 
+          <label style={`display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin-top:18px;`}>
+            <input
+              type="checkbox"
+              checked={consentChecked}
+              onChange={(e) => setConsentChecked((e.target as HTMLInputElement).checked)}
+              style={`margin-top:2px;flex-shrink:0;width:15px;height:15px;cursor:pointer;accent-color:${c.blue};`}
+            />
+            <span style={`font-size:0.78rem;color:${c.gray500};line-height:1.5;`}>
+              Jeg accepterer at {settings?.company_name ?? "virksomheden"} behandler mine personoplysninger for at levere tilbud og booking.{" "}
+              <a href={`${getApiBase()}/privacy`} target="_blank" rel="noopener" style={`color:${c.blue};`}>Læs privatlivspolitik</a>
+            </span>
+          </label>
+
           {(() => {
-            const disabled = !name || !phone || (action !== "callback" && !email) || (action === "book" && (!selectedDate || !selectedSlot)) || submitting
+            const disabled = !name || !phone || (action !== "callback" && !email) || (action === "book" && (!selectedDate || !selectedSlot)) || !consentChecked || submitting
             const label = submitting ? "Sender..." : action === "book" ? "Book tid" : action === "callback" ? "Bliv ringet op" : "Send tilbud"
             return (
               <button style={`${s.btn}margin-top:20px;` + (disabled ? s.btnDisabled : "")} disabled={disabled} onClick={handleSubmit}>

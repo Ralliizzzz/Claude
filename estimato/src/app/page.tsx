@@ -417,6 +417,12 @@ export default function HomePage() {
               <span className="text-sm text-gray-500">© 2025</span>
             </div>
             <div className="flex items-center gap-6">
+              <Link href="/privacy" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
+                Privatlivspolitik
+              </Link>
+              <Link href="/terms" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
+                Vilkår
+              </Link>
               <Link href="/auth/login" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
                 Log ind
               </Link>

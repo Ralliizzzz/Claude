@@ -2,9 +2,8 @@ import type { QuoteSettings, PriceBreakdown } from "./types"
 
 // Sættes ved mount() i index.tsx — detekteres fra script-taggets src
 let BASE = ""
-export function setApiBase(url: string) {
-  BASE = url
-}
+export function setApiBase(url: string) { BASE = url }
+export function getApiBase() { return BASE }
 
 export async function fetchSettings(companyId: string): Promise<QuoteSettings> {
   const res = await fetch(`${BASE}/api/widget/${companyId}/settings`)
