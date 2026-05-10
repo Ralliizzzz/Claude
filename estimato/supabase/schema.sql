@@ -16,6 +16,7 @@ CREATE TABLE public.companies (
   trial_end_date         TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '14 days'),
   stripe_customer_id     TEXT UNIQUE,
   stripe_subscription_id TEXT UNIQUE,
+  onboarding_completed_at TIMESTAMPTZ,
   created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

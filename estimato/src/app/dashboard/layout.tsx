@@ -24,6 +24,8 @@ export default async function DashboardLayout({
     .single();
   const company = companyResult.data as CompanyRow | null;
 
+  if (company && !company.onboarding_completed_at) redirect("/onboarding");
+
   const isTrialExpired =
     company?.subscription_status === "trial" &&
     new Date(company.trial_end_date) < new Date();

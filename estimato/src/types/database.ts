@@ -20,6 +20,7 @@ export interface CompanyRow {
   trial_end_date: string
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
+  onboarding_completed_at: string | null
   created_at: string
 }
 
