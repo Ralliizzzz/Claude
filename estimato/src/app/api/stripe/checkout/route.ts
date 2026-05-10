@@ -17,16 +17,21 @@ export async function POST() {
     .eq("id", user.id)
     .single()
 
-  const session = await getStripe().checkout.sessions.create({
-    mode: "subscription",
-    ...(company?.stripe_customer_id
-      ? { customer: company.stripe_customer_id }
-      : { customer_email: company?.email ?? undefined }),
-    line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
-    success_url: `${APP_URL}/dashboard?upgraded=1`,
-    cancel_url: `${APP_URL}/opgrader`,
-    metadata: { company_id: user.id },
-  })
-
-  return NextResponse.json({ url: session.url })
+  try {
+    const session = await getStripe().checkout.sessions.create({
+      mode: "subscription",
+      ...(company?.stripe_customer_id
+        ? { customer: company.stripe_customer_id }
+        : { customer_email: company?.email ?? undefined }),
+      line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
+      success_url: `${APP_URL}/dashboard?upgraded=1`,
+      cancel_url: `${APP_URL}/opgrader`,
+      metadata: { company_id: user.id },
+    })
+    return NextResponse.json({ url: session.url })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Ukendt Stripe-fejl"
+    console.error("Stripe checkout fejl:", message)
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
 }
