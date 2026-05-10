@@ -5,12 +5,39 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+const APP_URL = "https://estimato-xi.vercel.app";
+
 const benefits = [
   "Automatisk BBR-opslag og prisberegning",
   "Leads og bookinger samlet ét sted",
   "SMS- og e-mailnotifikationer",
   "Nem installation — to linjer kode",
 ];
+
+function PasswordRequirements({ password }: { password: string }) {
+  const checks = [
+    { label: "Mindst 8 tegn", ok: password.length >= 8 },
+    { label: "Mindst ét stort bogstav", ok: /[A-Z]/.test(password) },
+    { label: "Mindst ét tal", ok: /[0-9]/.test(password) },
+  ];
+  if (!password) return null;
+  return (
+    <ul className="flex flex-col gap-1 mt-1.5">
+      {checks.map(({ label, ok }) => (
+        <li key={label} className={`flex items-center gap-1.5 text-xs ${ok ? "text-emerald-600" : "text-gray-400"}`}>
+          <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {ok ? <polyline points="20 6 9 17 4 12" /> : <line x1="18" y1="6" x2="6" y2="18" />}
+          </svg>
+          {label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function isPasswordValid(p: string) {
+  return p.length >= 8 && /[A-Z]/.test(p) && /[0-9]/.test(p);
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -31,6 +58,7 @@ export default function SignupPage() {
       email,
       password,
       options: {
+        emailRedirectTo: `${APP_URL}/auth/callback`,
         data: { company_name: companyName },
       },
     });
@@ -41,9 +69,10 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/onboarding");
-    router.refresh();
+    router.push("/auth/check-email?email=" + encodeURIComponent(email));
   }
+
+  const passwordValid = isPasswordValid(password);
 
   return (
     <div className="flex min-h-screen">
@@ -153,10 +182,11 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={8}
+                autoComplete="new-password"
                 placeholder="Minimum 8 tegn"
                 className="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-400 transition-shadow"
               />
+              <PasswordRequirements password={password} />
             </div>
 
             <div className="flex items-start gap-3">
@@ -183,7 +213,7 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              disabled={loading || !termsAccepted}
+              disabled={loading || !termsAccepted || !passwordValid}
               className="bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60 shadow-sm mt-1"
             >
               {loading ? "Opretter konto..." : "Opret gratis konto"}

@@ -28,12 +28,14 @@ export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isAuthRoute = pathname.startsWith('/auth')
   const isDashboardRoute = pathname.startsWith('/dashboard')
+  // Authenticated users with a recovery session must land here to set a new password
+  const isPasswordResetPage = pathname === '/auth/nulstil-adgangskode'
 
   if (!user && isDashboardRoute) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  if (user && isAuthRoute) {
+  if (user && isAuthRoute && !isPasswordResetPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
