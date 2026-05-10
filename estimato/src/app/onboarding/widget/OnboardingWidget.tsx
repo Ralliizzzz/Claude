@@ -8,7 +8,8 @@ export default function OnboardingWidget({ companyId }: { companyId: string }) {
   const [copied, setCopied] = useState(false)
   const [completing, setCompleting] = useState(false)
 
-  const embedCode = `<div id="lead-widget" data-company="${companyId}"></div>\n<script src="https://estimato-xi.vercel.app/widget.js?v=6"></script>`
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://estimato.dk"
+  const embedCode = `<div id="lead-widget" data-company="${companyId}"></div>\n<script src="${appUrl}/widget.js?v=6"></script>`
 
   function handleCopy() {
     navigator.clipboard.writeText(embedCode)

@@ -269,7 +269,7 @@ export default function HomePage() {
               </div>
               <div className="bg-white rounded-b-2xl shadow-xl border border-gray-200 border-t-0 p-4">
                 <div id="lead-widget" data-company="5a5dd101-7be3-4035-9be3-8e87b94c2e89" className="w-full" />
-                <Script src="https://estimato-xi.vercel.app/widget.js?v=6" strategy="lazyOnload" />
+                <Script src={`${process.env.NEXT_PUBLIC_APP_URL ?? "https://estimato.dk"}/widget.js?v=6`} strategy="lazyOnload" />
               </div>
             </div>
           </div>

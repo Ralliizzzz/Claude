@@ -1,6 +1,6 @@
 [auth]
-site_url = "https://estimato-xi.vercel.app"
-additional_redirect_urls = ["https://estimato-xi.vercel.app/auth/callback"]
+site_url = "https://estimato.dk"
+additional_redirect_urls = ["https://estimato.dk/auth/callback", "https://estimato-xi.vercel.app/auth/callback"]
 enable_signup = true
 
 [auth.email]

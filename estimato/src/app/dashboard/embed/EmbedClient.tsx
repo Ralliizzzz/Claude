@@ -6,7 +6,8 @@ export default function EmbedClient({ companyId }: { companyId: string; appUrl: 
   const [copied, setCopied] = useState(false);
   const mountedRef = useRef(false);
 
-  const embedCode = `<div id="lead-widget" data-company="${companyId}"></div>\n<script src="https://estimato-xi.vercel.app/widget.js?v=6"></script>`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://estimato.dk";
+  const embedCode = `<div id="lead-widget" data-company="${companyId}"></div>\n<script src="${appUrl}/widget.js?v=6"></script>`;
 
   useEffect(() => {
     if (mountedRef.current) return;

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-const APP_URL = "https://estimato-xi.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://estimato.dk";
 
 const benefits = [
   "Automatisk BBR-opslag og prisberegning",

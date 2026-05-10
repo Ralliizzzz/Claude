@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 
-const APP_URL = "https://estimato-xi.vercel.app"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://estimato.dk"
 
 export default function GlemtAdgangskodePage() {
   const [email, setEmail] = useState("")
