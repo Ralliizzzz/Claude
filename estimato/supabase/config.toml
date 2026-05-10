@@ -1,0 +1,13 @@
+[auth]
+site_url = "https://estimato-xi.vercel.app"
+additional_redirect_urls = ["https://estimato-xi.vercel.app/auth/callback"]
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
