@@ -1,18 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 
 export default function UpgradeButton() {
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   async function handleClick() {
     setLoading(true)
     try {
       const res = await fetch("/api/stripe/checkout", { method: "POST" })
       const { url } = await res.json()
-      router.push(url)
+      window.location.href = url
     } catch {
       setLoading(false)
     }

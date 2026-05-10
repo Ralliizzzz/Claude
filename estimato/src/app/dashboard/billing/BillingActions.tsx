@@ -1,18 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 
 export function PortalButton({ label = "Administrer abonnement →" }: { label?: string }) {
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   async function handleClick() {
     setLoading(true)
     try {
       const res = await fetch("/api/stripe/portal", { method: "POST" })
       const { url } = await res.json()
-      router.push(url)
+      window.location.href = url
     } catch {
       setLoading(false)
     }
@@ -31,14 +29,13 @@ export function PortalButton({ label = "Administrer abonnement →" }: { label?:
 
 export function CheckoutButton() {
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   async function handleClick() {
     setLoading(true)
     try {
       const res = await fetch("/api/stripe/checkout", { method: "POST" })
       const { url } = await res.json()
-      router.push(url)
+      window.location.href = url
     } catch {
       setLoading(false)
     }
