@@ -8,6 +8,9 @@ export default function AdminNav() {
       <Link href="/admin/companies" className="text-sm text-gray-300 hover:text-white transition-colors">
         Firmaer
       </Link>
+      <Link href="/admin/prospects" className="text-sm text-gray-300 hover:text-white transition-colors">
+        Prospects
+      </Link>
       <Link href="/admin/feedback" className="text-sm text-gray-300 hover:text-white transition-colors">
         Feedback
       </Link>

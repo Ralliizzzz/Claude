@@ -10,6 +10,7 @@ export type PricingType = "sqm" | "interval"
 export type LeadStatus = "new" | "contacted" | "booked"
 export type LeadAction = "book" | "callback" | "email"
 export type SubscriptionStatus = "trial" | "active" | "cancelled" | "expired"
+export type ProspectStatus = "not_contacted" | "contacted" | "demo_scheduled" | "converted" | "declined"
 
 export interface CompanyRow {
   id: string
@@ -82,6 +83,21 @@ export interface FeedbackRow {
   id: string
   company_id: string
   message: string
+  created_at: string
+}
+
+export interface ProspectRow {
+  id: string
+  company_name: string
+  contact_name: string | null
+  email: string | null
+  phone: string | null
+  city: string | null
+  website: string | null
+  status: ProspectStatus
+  notes: string | null
+  source: string | null
+  last_contacted_at: string | null
   created_at: string
 }
 

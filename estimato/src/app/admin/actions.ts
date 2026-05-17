@@ -2,7 +2,7 @@
 
 import { createClient, createServiceClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
-import type { SubscriptionStatus } from "@/types/database"
+import type { SubscriptionStatus, ProspectStatus } from "@/types/database"
 import { isAdminAuthenticated } from "./login/actions"
 
 async function assertAdmin() {
@@ -47,6 +47,51 @@ export async function deleteCompany(companyId: string) {
   const { error } = await supabase.auth.admin.deleteUser(companyId)
   if (error) throw error
   revalidatePath("/admin/companies")
+}
+
+export async function addProspect(data: {
+  company_name: string
+  contact_name?: string
+  email?: string
+  phone?: string
+  city?: string
+  website?: string
+  source?: string
+  notes?: string
+}) {
+  await assertAdmin()
+  const supabase = await createServiceClient()
+  const { error } = await supabase.from("prospects").insert(data)
+  if (error) throw error
+  revalidatePath("/admin/prospects")
+}
+
+export async function updateProspectStatus(id: string, status: ProspectStatus) {
+  await assertAdmin()
+  const supabase = await createServiceClient()
+  const update: Record<string, unknown> = { status }
+  if (status !== "not_contacted") {
+    update.last_contacted_at = new Date().toISOString()
+  }
+  const { error } = await supabase.from("prospects").update(update).eq("id", id)
+  if (error) throw error
+  revalidatePath("/admin/prospects")
+}
+
+export async function updateProspectNotes(id: string, notes: string) {
+  await assertAdmin()
+  const supabase = await createServiceClient()
+  const { error } = await supabase.from("prospects").update({ notes }).eq("id", id)
+  if (error) throw error
+  revalidatePath("/admin/prospects")
+}
+
+export async function deleteProspect(id: string) {
+  await assertAdmin()
+  const supabase = await createServiceClient()
+  const { error } = await supabase.from("prospects").delete().eq("id", id)
+  if (error) throw error
+  revalidatePath("/admin/prospects")
 }
 
 export async function submitFeedback(message: string) {
