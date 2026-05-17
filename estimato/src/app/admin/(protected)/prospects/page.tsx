@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/server"
 import type { ProspectRow } from "@/types/database"
 import AddProspectForm from "./AddProspectForm"
 import ProspectActions from "./ProspectActions"
+import CvrImportButton from "./CvrImportButton"
 
 const STATUS_LABELS: Record<string, string> = {
   not_contacted: "Ikke kontaktet",
@@ -51,6 +52,7 @@ export default async function ProspectsPage() {
         ))}
       </div>
 
+      <CvrImportButton />
       <AddProspectForm />
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">

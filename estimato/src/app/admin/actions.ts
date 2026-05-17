@@ -94,6 +94,27 @@ export async function deleteProspect(id: string) {
   revalidatePath("/admin/prospects")
 }
 
+export async function bulkImportProspects(companies: {
+  companyName: string
+  city?: string
+  phone?: string
+  email?: string
+  cvrNumber: string
+}[]) {
+  await assertAdmin()
+  const supabase = await createServiceClient()
+  const rows = companies.map((c) => ({
+    company_name: c.companyName,
+    city: c.city || null,
+    phone: c.phone || null,
+    email: c.email || null,
+    source: `cvr-${c.cvrNumber}`,
+  }))
+  const { error } = await supabase.from("prospects").insert(rows)
+  if (error) throw error
+  revalidatePath("/admin/prospects")
+}
+
 export async function submitFeedback(message: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
