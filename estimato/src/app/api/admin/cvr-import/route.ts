@@ -12,6 +12,7 @@ export interface CvrCompany {
   postalCode: string
   phone: string | null
   email: string | null
+  website: string | null
   alreadyImported: boolean
 }
 
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
       postalCode: extractPostalCode(address),
       phone: place.nationalPhoneNumber ?? null,
       email: null,
+      website: place.websiteUri ?? null,
       alreadyImported: importedSet.has(placeId),
     }
   })

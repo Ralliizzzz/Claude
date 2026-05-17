@@ -99,6 +99,8 @@ export async function bulkImportProspects(companies: {
   city?: string
   phone?: string
   email?: string
+  website?: string
+  contactName?: string
   cvrNumber: string
 }[]) {
   await assertAdmin()
@@ -108,6 +110,8 @@ export async function bulkImportProspects(companies: {
     city: c.city || null,
     phone: c.phone || null,
     email: c.email || null,
+    website: c.website || null,
+    contact_name: c.contactName || null,
     source: `places-${c.cvrNumber}`,
   }))
   const { error } = await supabase.from("prospects").insert(rows)
