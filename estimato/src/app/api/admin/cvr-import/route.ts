@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { isAdminAuthenticated } from "@/app/admin/login/actions"
 import { createServiceClient } from "@/lib/supabase/server"
 
-const PLACES_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json"
-const DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
+const PLACES_URL = "https://places.googleapis.com/v1/places:searchText"
 
 export interface CvrCompany {
   cvrNumber: string
@@ -45,49 +44,41 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const query = city?.trim()
+  const textQuery = city?.trim()
     ? `rengøringsfirma i ${city.trim()}`
     : "rengøringsfirma Danmark"
 
   let searchRes: Response
   try {
-    searchRes = await fetch(
-      `${PLACES_URL}?query=${encodeURIComponent(query)}&language=da&key=${apiKey}`,
-      { cache: "no-store" }
-    )
+    searchRes = await fetch(PLACES_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri",
+      },
+      body: JSON.stringify({
+        textQuery,
+        languageCode: "da",
+        maxResultCount: Math.min(Number(limit) || 20, 20),
+      }),
+      cache: "no-store",
+    })
   } catch {
     return NextResponse.json({ error: "Kunne ikke forbinde til Google Places" }, { status: 502 })
   }
 
   if (!searchRes.ok) {
-    return NextResponse.json({ error: `Google Places fejl ${searchRes.status}` }, { status: 502 })
+    const text = await searchRes.text().catch(() => "")
+    return NextResponse.json({ error: `Google Places fejl ${searchRes.status}: ${text.slice(0, 200)}` }, { status: 502 })
   }
 
   const searchData = await searchRes.json()
-  if (searchData.status === "REQUEST_DENIED") {
-    return NextResponse.json({ error: `API-nøgle afvist: ${searchData.error_message}` }, { status: 502 })
-  }
-  if (searchData.status === "ZERO_RESULTS") {
+  const places: any[] = searchData.places ?? []
+
+  if (places.length === 0) {
     return NextResponse.json({ companies: [], total: 0 })
   }
-
-  const places: any[] = (searchData.results ?? []).slice(0, Math.min(Number(limit) || 20, 20))
-
-  // Fetch phone + website via Place Details for each result
-  const detailed = await Promise.all(
-    places.map(async (place) => {
-      try {
-        const r = await fetch(
-          `${DETAILS_URL}?place_id=${place.place_id}&fields=name,formatted_phone_number,website,formatted_address&language=da&key=${apiKey}`,
-          { cache: "no-store" }
-        )
-        const d = await r.json()
-        return { ...place, ...(d.result ?? {}) }
-      } catch {
-        return place
-      }
-    })
-  )
 
   // Dedup check against existing prospects
   const supabase = await createServiceClient()
@@ -96,16 +87,20 @@ export async function POST(req: NextRequest) {
     (existing ?? []).map((p) => p.source?.replace("places-", "")).filter(Boolean)
   )
 
-  const companies: CvrCompany[] = detailed.map((place) => ({
-    cvrNumber: place.place_id,
-    companyName: place.name ?? "Ukendt",
-    address: place.formatted_address ?? "",
-    city: extractCity(place.formatted_address ?? ""),
-    postalCode: extractPostalCode(place.formatted_address ?? ""),
-    phone: place.formatted_phone_number ?? null,
-    email: null,
-    alreadyImported: importedSet.has(place.place_id),
-  }))
+  const companies: CvrCompany[] = places.map((place) => {
+    const placeId = place.id ?? ""
+    const address = place.formattedAddress ?? ""
+    return {
+      cvrNumber: placeId,
+      companyName: place.displayName?.text ?? "Ukendt",
+      address,
+      city: extractCity(address),
+      postalCode: extractPostalCode(address),
+      phone: place.nationalPhoneNumber ?? null,
+      email: null,
+      alreadyImported: importedSet.has(placeId),
+    }
+  })
 
-  return NextResponse.json({ companies, total: searchData.results?.length ?? companies.length })
+  return NextResponse.json({ companies, total: companies.length })
 }
