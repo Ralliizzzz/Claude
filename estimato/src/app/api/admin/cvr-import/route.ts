@@ -24,12 +24,6 @@ export async function POST(req: NextRequest) {
 
   const username = process.env.CVR_API_USERNAME
   const password = process.env.CVR_API_PASSWORD
-  if (!username || !password) {
-    return NextResponse.json(
-      { error: "CVR API-legitimationsoplysninger mangler. Tilføj CVR_API_USERNAME og CVR_API_PASSWORD i miljøvariablerne." },
-      { status: 500 }
-    )
-  }
 
   const mustFilters: object[] = [
     { terms: { "Vrvirksomhed.nyesteHovedbranche.branchekode": CLEANING_CODES } },
@@ -68,12 +62,16 @@ export async function POST(req: NextRequest) {
     ],
   }
 
-  const auth = Buffer.from(`${username}:${password}`).toString("base64")
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (username && password) {
+    headers["Authorization"] = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
+  }
+
   let cvrRes: Response
   try {
     cvrRes = await fetch(CVR_API, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Basic ${auth}` },
+      headers,
       body: JSON.stringify(query),
       cache: "no-store",
     })
@@ -83,6 +81,12 @@ export async function POST(req: NextRequest) {
 
   if (!cvrRes.ok) {
     const text = await cvrRes.text().catch(() => "")
+    if (cvrRes.status === 401) {
+      return NextResponse.json(
+        { error: "CVR API kræver login. Opret gratis adgang på datacvr.virk.dk/datservice og tilføj CVR_API_USERNAME og CVR_API_PASSWORD i Vercel miljøvariabler." },
+        { status: 502 }
+      )
+    }
     return NextResponse.json({ error: `CVR API fejl ${cvrRes.status}: ${text.slice(0, 200)}` }, { status: 502 })
   }
 
